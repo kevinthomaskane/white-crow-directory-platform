@@ -1,0 +1,8 @@
+{
+  "name": "white-crow-directory-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
