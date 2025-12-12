@@ -6,7 +6,7 @@
     "supabase:login": "npx supabase login",
     "gen:types": "node scripts/genTypes.js",
     "build": "tsc",
-    "start": "ts-node dist/index.ts",
+    "start": "node dist/index.js",
     "dev": "ts-node src/index.ts"
   },
   "license": "MIT",
