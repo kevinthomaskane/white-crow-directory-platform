@@ -1,8 +1,13 @@
 {
   "name": "white-crow-directory-platform",
   "private": true,
+  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "supabase:types": "node packages/shared/scripts/generate-supabase-types.js",
+    "supabase:login": "npx supabase login"
+  }
 }

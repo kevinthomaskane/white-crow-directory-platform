@@ -1,0 +1,19 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "apps/directory-engine"
+    },
+    {
+      "path": "apps/worker-api"
+    }
+  ],
+  "compilerOptions": {
+    "composite": false,
+    "skipLibCheck": true,
+    "strict": true
+  }
+}
