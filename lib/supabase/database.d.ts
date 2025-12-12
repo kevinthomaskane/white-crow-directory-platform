@@ -44,6 +44,44 @@ export type Database = {
           },
         ]
       }
+      business_review_sources: {
+        Row: {
+          business_id: string
+          id: string
+          last_synced_at: string | null
+          provider: string
+          rating: number | null
+          review_count: number | null
+          url: string | null
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          last_synced_at?: string | null
+          provider: string
+          rating?: number | null
+          review_count?: number | null
+          url?: string | null
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          rating?: number | null
+          review_count?: number | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_review_sources_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_reviews: {
         Row: {
           author_image_url: string | null
@@ -201,6 +239,41 @@ export type Database = {
           },
         ]
       }
+      cities: {
+        Row: {
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          population: number | null
+          state_id: string
+        }
+        Insert: {
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          population?: number | null
+          state_id: string
+        }
+        Update: {
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          population?: number | null
+          state_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cities_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -219,6 +292,24 @@ export type Database = {
           display_name?: string
           id?: string
           role?: string
+        }
+        Relationships: []
+      }
+      states: {
+        Row: {
+          code: string
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }

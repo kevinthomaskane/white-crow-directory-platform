@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-const ADMIN_DOMAIN = 'whitecrowdirectoryengine.com';
+import { ADMIN_DOMAIN } from './lib/constants';
 
 export function proxy(request: NextRequest) {
   const site = process.env.SITE || request.headers.get('host') || '';

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import type { User } from '@supabase/supabase-js';
+import { ADMIN_SITE_NAV } from '@/lib/constants';
 
 export function AdminNav({ user }: { user: User }) {
   const router = useRouter();
@@ -20,27 +21,18 @@ export function AdminNav({ user }: { user: User }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <a href="/admin" className="text-lg font-semibold tracking-tight">
-            White Crow
+            White Crow Admin
           </a>
           <div className="flex items-center gap-4 text-sm">
-            <a
-              href="/admin/sites"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Sites
-            </a>
-            <a
-              href="/admin/listings"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Listings
-            </a>
-            <a
-              href="/admin/categories"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Categories
-            </a>
+            {ADMIN_SITE_NAV.map((site) => (
+              <a
+                key={site.href}
+                href={site.href}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {site.title}
+              </a>
+            ))}
           </div>
         </div>
         <div className="flex items-center gap-4">
