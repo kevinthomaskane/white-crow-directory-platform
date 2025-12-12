@@ -2,14 +2,16 @@
   "name": "directory-engine-worker",
   "version": "0.1.0",
   "main": "index.js",
-  "type": "module",
   "scripts": {
+    "supabase:login": "npx supabase login",
+    "gen:types": "node scripts/genTypes.js",
     "build": "tsc",
-    "start": "ts-node src/index.ts",
+    "start": "ts-node dist/index.ts",
     "dev": "ts-node src/index.ts"
   },
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.87.1",
     "express": "^5.2.1"
   },
   "devDependencies": {
