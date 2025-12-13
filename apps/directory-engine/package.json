@@ -7,9 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "supabase:login": "npx supabase login",
-    "gen:types": "node scripts/genTypes.js"
+    "lint": "eslint"
   },
   "dependencies": {
     "@white-crow/shared": "workspace:*",
