@@ -1,24 +1,20 @@
 import { createClient } from '@/lib/supabase/server';
-import { AddBusinessesForm } from '@/components/admin/add-businesses-form';
+import { AddBusinessesForm } from '@/components/admin/add-businesses';
 
 export default async function AddBusinessesPage() {
   const supabase = await createClient();
 
-  // Fetch existing verticals
-  const { data: verticals, error: verticalsError } = await supabase
-    .from('verticals')
-    .select('id, name, slug')
-    .order('name');
-
-  const { data: states, error: statesError } = await supabase
-    .from('states')
-    .select('id, name, code')
-    .order('name');
+  const [
+    { data: verticals, error: verticalsError },
+    { data: states, error: statesError },
+  ] = await Promise.all([
+    supabase.from('verticals').select('id, name, slug').order('name'),
+    supabase.from('states').select('id, name, code').order('name'),
+  ]);
 
   if (verticalsError) {
     console.error('Error fetching verticals:', verticalsError);
   }
-
   if (statesError) {
     console.error('Error fetching states:', statesError);
   }

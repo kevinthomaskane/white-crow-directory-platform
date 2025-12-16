@@ -11,8 +11,10 @@ export async function getCategoriesByVertical(verticalId: string) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error('User not authenticated:', userError);
-    throw new Error('You must be logged in to get categories.');
+    return {
+      error: 'You must be logged in to get categories.',
+      data: null,
+    };
   }
 
   const { data, error } = await supabase
@@ -22,9 +24,11 @@ export async function getCategoriesByVertical(verticalId: string) {
     .order('name');
 
   if (error) {
-    console.error('Error fetching categories:', error);
-    throw new Error('Error fetching categories.');
+    return {
+      error: error.message || 'Error fetching categories.',
+      data: null,
+    };
   }
 
-  return { categories: data || [] };
+  return { data, error: null };
 }

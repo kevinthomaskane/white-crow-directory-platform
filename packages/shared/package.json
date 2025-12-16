@@ -22,7 +22,8 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.87.1"
+    "@supabase/supabase-js": "^2.87.1",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

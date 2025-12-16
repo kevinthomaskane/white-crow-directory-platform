@@ -1,14 +1,17 @@
 'use server';
 
 import OpenAI from 'openai';
-import { normalizeCategoryName, slugify } from '@/lib/normalize';
+import { slugify, normalizeCategoryName } from '@/lib/utils';
 
 export async function generateCategoriesForVertical(input: {
   vertical: string;
 }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error('OpenAI API key is not configured.');
+    return {
+      error: 'OpenAI API key is not configured.',
+      data: null,
+    };
   }
 
   const openai = new OpenAI({ apiKey });
@@ -42,7 +45,12 @@ Example output:
   });
 
   const content = completion.choices[0]?.message?.content;
-  if (!content) throw new Error('No response received from OpenAI.');
+  if (!content) {
+    return {
+      error: 'No response from OpenAI.',
+      data: null,
+    };
+  }
 
   const cleaned = content
     .replace(/```json\s*/g, '')
@@ -52,11 +60,17 @@ Example output:
   try {
     raw = JSON.parse(cleaned);
   } catch {
-    throw new Error('Failed to parse OpenAI response as JSON.');
+    return {
+      error: 'Failed to parse OpenAI response as JSON.',
+      data: null,
+    };
   }
 
   if (!Array.isArray(raw)) {
-    throw new Error('Invalid response format from OpenAI.');
+    return {
+      error: 'OpenAI response is not a JSON array.',
+      data: null,
+    };
   }
 
   const seen = new Set<string>();
@@ -72,8 +86,11 @@ Example output:
     });
 
   if (normalized.length === 0) {
-    throw new Error('No valid categories generated.');
+    return {
+      error: 'No valid categories generated.',
+      data: null,
+    };
   }
 
-  return { categories: normalized };
+  return { data: normalized, error: null };
 }
