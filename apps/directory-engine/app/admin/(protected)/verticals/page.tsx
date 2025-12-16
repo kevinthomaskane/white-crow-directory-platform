@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { AddVerticalForm } from '@/components/admin/add-vertical-form';
+import ErrorDisplay from '@/components/admin/error-display';
 
 export default async function VerticalsPage() {
   const supabase = await createClient();
@@ -11,7 +12,11 @@ export default async function VerticalsPage() {
     .order('name');
 
   if (verticalsError) {
-    console.error('Error fetching verticals:', verticalsError);
+    return (
+      <ErrorDisplay
+        message={`Error loading verticals: ${verticalsError.message}. Try refreshing the page.`}
+      />
+    );
   }
   return (
     <div className="space-y-8">
@@ -24,7 +29,7 @@ export default async function VerticalsPage() {
         </p>
       </div>
 
-      <AddVerticalForm verticals={verticals || []} />
+      <AddVerticalForm verticals={verticals} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { AddBusinessesForm } from '@/components/admin/add-businesses';
+import ErrorDisplay from '@/components/admin/error-display';
 
 export default async function AddBusinessesPage() {
   const supabase = await createClient();
@@ -13,10 +14,18 @@ export default async function AddBusinessesPage() {
   ]);
 
   if (verticalsError) {
-    console.error('Error fetching verticals:', verticalsError);
+    return (
+      <ErrorDisplay
+        message={`Error loading verticals: ${verticalsError.message}. Try refreshing the page.`}
+      />
+    );
   }
   if (statesError) {
-    console.error('Error fetching states:', statesError);
+    return (
+      <ErrorDisplay
+        message={`Error loading states: ${statesError.message}. Try refreshing the page.`}
+      />
+    );
   }
 
   return (
@@ -32,7 +41,7 @@ export default async function AddBusinessesPage() {
       </div>
 
       <div className="max-w-2xl">
-        <AddBusinessesForm verticals={verticals || []} states={states || []} />
+        <AddBusinessesForm verticals={verticals} states={states} />
       </div>
     </div>
   );

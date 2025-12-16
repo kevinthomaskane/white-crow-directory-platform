@@ -3,47 +3,66 @@
 import {
   GooglePlacesSearchJobPayloadSchema,
   type GooglePlacesSearchJobPayload,
-  type WorkerAPIResponse,
 } from '@white-crow/shared';
+import { createClient } from '@/lib/supabase/server';
+import type { ActionsResponse, JobInsertMinimal } from '@/lib/types';
 
-export async function submitGooglePlacesSearchJob(
-  payload: GooglePlacesSearchJobPayload
-) {
-  // Validate the payload with Zod
-  const validatedPayload =
-    GooglePlacesSearchJobPayloadSchema.safeParse(payload);
-  if (!validatedPayload.success) {
-    throw new Error('Invalid job payload.');
+export async function submitGooglePlacesSearchJobs(
+  payloads: GooglePlacesSearchJobPayload[]
+): Promise<
+  ActionsResponse<{
+    runId: string;
+    jobCount: number;
+  }>
+> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { ok: false, error: 'You must be logged in to submit a job.' };
   }
 
-  const workerAPIUrl = process.env.WORKER_API_URL;
-  const workerAPIKey = process.env.WORKER_API_KEY;
-
-  if (!workerAPIKey) {
-    throw new Error('Worker API key is not configured on the server.');
+  if (!Array.isArray(payloads) || payloads.length === 0) {
+    return { ok: false, error: 'No jobs provided.' };
   }
 
-  if (!workerAPIUrl) {
-    throw new Error('Worker API URL is not configured on the server.');
+  // Validate each payload independently
+  for (const payload of payloads) {
+    const result = GooglePlacesSearchJobPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      return { ok: false, error: `Invalid job payload for ${payload.query}` };
+    }
   }
 
-  let res: Response;
-  try {
-    res = await fetch(`${workerAPIUrl}/jobs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-worker-key': workerAPIKey,
-      },
-      body: JSON.stringify(validatedPayload.data),
-    });
-  } catch (error) {
-    throw new Error('Worker API is unreachable.');
-  }
+  const runId = crypto.randomUUID();
 
-  const { jobId, error }: WorkerAPIResponse = await res.json();
+  // insert jobs into jobs table
+  const jobs: JobInsertMinimal[] = payloads.map((payload) => ({
+    job_type: 'google_places_search',
+    payload,
+    run_id: runId,
+    status: 'pending',
+  }));
+
+  const { error } = await supabase.from('jobs').insert(jobs);
+
   if (error) {
-    throw new Error(error);
+    console.error('Failed to insert jobs:', error);
+    return {
+      ok: false,
+      error: error.message || 'Failed to submit jobs.',
+    };
   }
-  return jobId;
+
+  return {
+    ok: true,
+    data: {
+      runId,
+      jobCount: jobs.length,
+    },
+  };
 }

@@ -2,12 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { normalizeWhitespace, slugify } from '@/lib/utils';
+import type { ActionsResponse, VerticalMinimal } from '@/lib/types';
 
-export async function addVertical(vertical: string) {
+export async function addVertical(
+  vertical: VerticalMinimal['name']
+): Promise<ActionsResponse<VerticalMinimal>> {
   const name = normalizeWhitespace(vertical || '');
   if (!name) {
     return {
-      data: null,
+      ok: false,
       error: 'Vertical name is required.',
     };
   }
@@ -16,7 +19,7 @@ export async function addVertical(vertical: string) {
   if (!slug) {
     return {
       error: 'Invalid vertical name.',
-      data: null,
+      ok: false,
     };
   }
   const supabase = await createClient();
@@ -28,7 +31,7 @@ export async function addVertical(vertical: string) {
 
   if (userError || !user) {
     return {
-      data: null,
+      ok: false,
       error: 'You must be logged in to add a vertical.',
     };
   }
@@ -42,15 +45,15 @@ export async function addVertical(vertical: string) {
   if (error) {
     if (error.code === '23505') {
       return {
-        data: null,
+        ok: false,
         error: 'A vertical with this name or slug already exists.',
       };
     }
     return {
-      data: null,
+      ok: false,
       error: error.message || 'Failed to add vertical.',
     };
   }
 
-  return { data, error: null };
+  return { data, ok: true };
 }

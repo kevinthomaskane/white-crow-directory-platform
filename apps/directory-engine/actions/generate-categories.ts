@@ -2,15 +2,16 @@
 
 import OpenAI from 'openai';
 import { slugify, normalizeCategoryName } from '@/lib/utils';
+import { ActionsResponse, VerticalMinimal } from '@/lib/types';
 
-export async function generateCategoriesForVertical(input: {
-  vertical: string;
-}) {
+export async function generateCategoriesForVertical(
+  vertical: VerticalMinimal['name']
+): Promise<ActionsResponse<string[]>> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return {
       error: 'OpenAI API key is not configured.',
-      data: null,
+      ok: false,
     };
   }
 
@@ -18,7 +19,7 @@ export async function generateCategoriesForVertical(input: {
 
   const prompt = `Generate a clean, non-overlapping list of category names for the business vertical below.
 
-Vertical: ${input.vertical}
+Vertical: ${vertical}
 
 Requirements:
 - Return ONLY a JSON array of strings
@@ -48,7 +49,7 @@ Example output:
   if (!content) {
     return {
       error: 'No response from OpenAI.',
-      data: null,
+      ok: false,
     };
   }
 
@@ -62,14 +63,14 @@ Example output:
   } catch {
     return {
       error: 'Failed to parse OpenAI response as JSON.',
-      data: null,
+      ok: false,
     };
   }
 
   if (!Array.isArray(raw)) {
     return {
       error: 'OpenAI response is not a JSON array.',
-      data: null,
+      ok: false,
     };
   }
 
@@ -88,9 +89,9 @@ Example output:
   if (normalized.length === 0) {
     return {
       error: 'No valid categories generated.',
-      data: null,
+      ok: false,
     };
   }
 
-  return { data: normalized, error: null };
+  return { data: normalized, ok: true };
 }

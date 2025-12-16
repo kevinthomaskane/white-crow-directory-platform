@@ -21,46 +21,46 @@ import {
 } from '@/components/ui/popover';
 import { getCategoriesByVertical } from '@/actions/get-categories';
 import { getCitiesByState } from '@/actions/get-cities';
-import { submitGooglePlacesSearchJob } from '@/actions/submit-job';
+import { submitGooglePlacesSearchJobs } from '@/actions/submit-job';
 import {
   GooglePlacesSearchJobPayloadSchema,
   type GooglePlacesSearchJobPayload,
-  type PlacesSearchQuery,
 } from '@white-crow/shared';
+import type {
+  CategoryMinimal,
+  CityMinimal,
+  StateMinimal,
+  VerticalMinimal,
+} from '@/lib/types';
 
-type Vertical = { id: string; name: string; slug: string };
-type Category = { id: string; name: string; slug: string; vertical_id: string };
-type State = { id: string; name: string; code: string };
-type City = {
-  id: string;
-  name: string;
-  population: number | null;
-  state_id: string;
+type AddBusinessesFormProps = {
+  verticals: VerticalMinimal[];
+  states: StateMinimal[];
 };
 
 export function AddBusinessesForm({
   verticals,
   states,
-}: {
-  verticals: Vertical[];
-  states: State[];
-}) {
+}: AddBusinessesFormProps) {
   // vertical -> categories
   const [verticalOpen, setVerticalOpen] = useState(false);
-  const [selectedVertical, setSelectedVertical] = useState<Vertical | null>(
-    null
-  );
+  const [selectedVertical, setSelectedVertical] =
+    useState<VerticalMinimal | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [categories, setCategories] = useState<CategoryMinimal[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<
+    Array<CategoryMinimal['id']>
+  >([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // state -> cities
   const [stateOpen, setStateOpen] = useState(false);
-  const [selectedState, setSelectedState] = useState<State | null>(null);
+  const [selectedState, setSelectedState] = useState<StateMinimal | null>(null);
   const [citiesOpen, setCitiesOpen] = useState(false);
-  const [cities, setCities] = useState<City[]>([]);
-  const [selectedCityIds, setSelectedCityIds] = useState<string[]>([]);
+  const [cities, setCities] = useState<CityMinimal[]>([]);
+  const [selectedCityIds, setSelectedCityIds] = useState<
+    Array<CityMinimal['id']>
+  >([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
 
   // submit + preview
@@ -72,8 +72,13 @@ export function AddBusinessesForm({
   const fetchCategories = useCallback(async (verticalId: string) => {
     setIsLoadingCategories(true);
     try {
-      const result = await getCategoriesByVertical(verticalId);
-      setCategories(result.categories);
+      const res = await getCategoriesByVertical(verticalId);
+      if (!res.ok) {
+        setCategories([]);
+        setError(res.error || 'Failed to fetch categories for this vertical.');
+        return;
+      }
+      setCategories(res.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
       setCategories([]);
@@ -86,8 +91,13 @@ export function AddBusinessesForm({
   const fetchCities = useCallback(async (stateId: string) => {
     setIsLoadingCities(true);
     try {
-      const result = await getCitiesByState(stateId);
-      setCities(result.cities);
+      const res = await getCitiesByState(stateId);
+      if (!res.ok) {
+        setCities([]);
+        setError(res.error || 'Failed to fetch cities for this state.');
+        return;
+      }
+      setCities(res.data);
     } catch (err) {
       console.error('Error fetching cities:', err);
       setCities([]);
@@ -147,12 +157,14 @@ export function AddBusinessesForm({
     const map = new Map(categories.map((c) => [c.id, c]));
     return selectedCategoryIds
       .map((id) => map.get(id))
-      .filter(Boolean) as Category[];
+      .filter(Boolean) as CategoryMinimal[];
   }, [categories, selectedCategoryIds]);
 
   const selectedCities = useMemo(() => {
     const map = new Map(cities.map((c) => [c.id, c]));
-    return selectedCityIds.map((id) => map.get(id)).filter(Boolean) as City[];
+    return selectedCityIds
+      .map((id) => map.get(id))
+      .filter(Boolean) as CityMinimal[];
   }, [cities, selectedCityIds]);
 
   const previewQueries = useMemo(() => {
@@ -179,14 +191,14 @@ export function AddBusinessesForm({
     setRemovedQueries((prev) => new Set(prev).add(query));
   };
 
-  const handleVerticalSelect = (v: Vertical | null) => {
+  const handleVerticalSelect = (v: VerticalMinimal) => {
     setSelectedVertical(v);
     setVerticalOpen(false);
     setError(null);
     setSuccess(null);
   };
 
-  const handleCategoryToggle = (category: Category) => {
+  const handleCategoryToggle = (category: CategoryMinimal) => {
     setSelectedCategoryIds((prev) => {
       const isSelected = prev.includes(category.id);
       if (isSelected) return prev.filter((id) => id !== category.id);
@@ -206,14 +218,14 @@ export function AddBusinessesForm({
 
   const handleClearCategories = () => setSelectedCategoryIds([]);
 
-  const handleStateSelect = (s: State | null) => {
+  const handleStateSelect = (s: StateMinimal) => {
     setSelectedState(s);
     setStateOpen(false);
     setError(null);
     setSuccess(null);
   };
 
-  const handleCityToggle = (city: City) => {
+  const handleCityToggle = (city: CityMinimal) => {
     setSelectedCityIds((prev) => {
       const isSelected = prev.includes(city.id);
       if (isSelected) return prev.filter((id) => id !== city.id);
@@ -233,7 +245,7 @@ export function AddBusinessesForm({
 
   const handleClearCities = () => setSelectedCityIds([]);
 
-  const constructJobPayload = (): GooglePlacesSearchJobPayload => {
+  const constructJobPayloads = (): GooglePlacesSearchJobPayload[] => {
     if (!selectedVertical || !selectedState)
       throw new Error('Missing required fields.');
     if (selectedCategories.length === 0)
@@ -241,43 +253,50 @@ export function AddBusinessesForm({
     if (selectedCities.length === 0)
       throw new Error('Select at least one city.');
 
-    // Rebuild PlacesSearchQuery list from selected IDs so we can include category IDs
-    const payloadQueries: PlacesSearchQuery[] = [];
+    const payloads: GooglePlacesSearchJobPayload[] = [];
     for (const category of selectedCategories) {
       for (const city of selectedCities) {
         const q = `${category.name} ${selectedVertical.name} ${city.name} ${selectedState.code}`;
         if (removedQueries.has(q)) continue;
-        payloadQueries.push({
+        payloads.push({
+          vertical: selectedVertical.id,
           query: q,
           category: category.id,
         });
       }
     }
 
-    return {
-      jobType: 'google-places-search',
-      vertical: selectedVertical.id,
-      queries: payloadQueries,
-    };
+    return payloads;
   };
 
   const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
+    setIsSubmitting(true);
 
     try {
-      const payload = constructJobPayload();
-      const validated = GooglePlacesSearchJobPayloadSchema.parse(payload);
-      setIsSubmitting(true);
-      await submitGooglePlacesSearchJob(validated);
+      const payloads = constructJobPayloads();
+      for (const payload of payloads) {
+        const result = GooglePlacesSearchJobPayloadSchema.safeParse(payload);
+        if (!result.success) {
+          setError(`Invalid job payload for ${payload.query}`);
+          return;
+        }
+      }
+      const res = await submitGooglePlacesSearchJobs(payloads);
+      if (!res.ok) {
+        setError(res.error || 'Failed to submit job.');
+        return;
+      }
 
+      const { runId, jobCount } = res.data;
       // reset
       setSelectedVertical(null);
       setSelectedCategoryIds([]);
       setSelectedState(null);
       setSelectedCityIds([]);
       setRemovedQueries(new Set());
-      setSuccess('Submitted job successfully.');
+      setSuccess(`Successfully submitted ${jobCount} jobs. Run ID: ${runId}`);
     } catch (err) {
       console.error('Error submitting job:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit job.');

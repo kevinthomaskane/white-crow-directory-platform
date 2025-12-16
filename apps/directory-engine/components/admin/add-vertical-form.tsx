@@ -6,17 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getVerticals } from '@/actions/get-verticals';
+import { VerticalMinimal } from '@/lib/types';
 
-type Vertical = { id: string; name: string; slug: string };
+type AddVerticalFormProps = {
+  verticals: VerticalMinimal[];
+};
 
-export function AddVerticalForm({ verticals }: { verticals: Vertical[] }) {
+export function AddVerticalForm({ verticals }: AddVerticalFormProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFetchingExisting, setIsFetchingExisting] = useState(false);
   const [existingVerticals, setExistingVerticals] =
-    useState<Vertical[]>(verticals);
+    useState<VerticalMinimal[]>(verticals);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,32 +27,30 @@ export function AddVerticalForm({ verticals }: { verticals: Vertical[] }) {
     setSuccess(null);
     setIsSubmitting(true);
 
-    const { data: verticalData, error: addVerticalError } =
-      await addVertical(name);
-    if (!verticalData || addVerticalError) {
-      setError(addVerticalError || 'Failed to add vertical.');
+    try {
+      const res = await addVertical(name);
+      if (!res.ok) {
+        setError(res.error || 'Failed to add vertical.');
+        return;
+      }
+
+      setName('');
+      setSuccess('Vertical added. Fetching updated list...');
+      setIsFetchingExisting(true);
+
+      const reloadRes = await getVerticals();
+      if (!reloadRes.ok) {
+        setError(reloadRes.error || 'Failed to fetch existing verticals.');
+        return;
+      }
+
+      setExistingVerticals(reloadRes.data);
+    } catch (err) {
+      setError('An unexpected error occurred.');
+    } finally {
+      setIsFetchingExisting(false);
       setIsSubmitting(false);
-      return;
     }
-
-    setIsFetchingExisting(true);
-
-    const { data: newVerticals, error: getVerticalsError } =
-      await getVerticals();
-
-    setIsFetchingExisting(false);
-    setIsSubmitting(false);
-
-    if (!newVerticals || getVerticalsError) {
-      setError(
-        getVerticalsError || 'Vertical added, but failed to fetch updated list.'
-      );
-      return;
-    }
-
-    setName('');
-    setSuccess('Vertical added.');
-    setExistingVerticals(newVerticals);
   }
 
   return (

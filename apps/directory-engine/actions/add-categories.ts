@@ -2,11 +2,16 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { normalizeCategoryName, slugify } from '@/lib/utils';
+import type {
+  ActionsResponse,
+  CategoryMinimal,
+  VerticalMinimal,
+} from '@/lib/types';
 
-export async function addCategoriesToVertical(input: {
-  verticalId: string;
-  categories: string[];
-}) {
+export async function addCategoriesToVertical(
+  verticalId: VerticalMinimal['id'],
+  categories: Array<CategoryMinimal['name']>
+): Promise<ActionsResponse<CategoryMinimal[]>> {
   const supabase = await createClient();
 
   const {
@@ -15,14 +20,20 @@ export async function addCategoriesToVertical(input: {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error('User not authenticated:', userError);
-    throw new Error('You must be logged in to add categories.');
+    return {
+      ok: false,
+      error: 'You must be logged in to add categories.',
+    };
   }
 
-  const verticalId = input.verticalId;
-  if (!verticalId) throw new Error('Vertical is required.');
+  if (!verticalId) {
+    return {
+      ok: false,
+      error: 'Vertical ID is required.',
+    };
+  }
 
-  const cleaned = input.categories
+  const cleaned = categories
     .map((c) => normalizeCategoryName(c))
     .map((name) => ({ name, slug: slugify(name) }))
     .filter((c) => c.name.length > 0 && c.slug.length > 0);
@@ -36,10 +47,13 @@ export async function addCategoriesToVertical(input: {
   });
 
   if (unique.length === 0) {
-    throw new Error('No valid categories to add.');
+    return {
+      ok: false,
+      error: 'No valid categories to add.',
+    };
   }
 
-  const { data, error } = await supabase
+  const { data, error: insertError } = await supabase
     .from('categories')
     .insert(
       unique.map((c) => ({
@@ -50,10 +64,13 @@ export async function addCategoriesToVertical(input: {
     )
     .select('id, name, slug, vertical_id');
 
-  if (error) {
-    console.error('Error inserting categories:', error);
-    throw new Error(error.message || 'Failed to add categories.');
+  if (insertError) {
+    console.error('Error inserting categories:', insertError);
+    return {
+      ok: false,
+      error: insertError.message || 'Failed to add categories.',
+    };
   }
 
-  return { inserted: data || [] };
+  return { ok: true, data };
 }

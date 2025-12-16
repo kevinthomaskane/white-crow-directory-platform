@@ -1,8 +1,15 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import type {
+  ActionsResponse,
+  CategoryMinimal,
+  VerticalMinimal,
+} from '@/lib/types';
 
-export async function getCategoriesByVertical(verticalId: string) {
+export async function getCategoriesByVertical(
+  verticalId: VerticalMinimal['id']
+): Promise<ActionsResponse<CategoryMinimal[]>> {
   const supabase = await createClient();
 
   const {
@@ -13,7 +20,7 @@ export async function getCategoriesByVertical(verticalId: string) {
   if (userError || !user) {
     return {
       error: 'You must be logged in to get categories.',
-      data: null,
+      ok: false,
     };
   }
 
@@ -26,9 +33,9 @@ export async function getCategoriesByVertical(verticalId: string) {
   if (error) {
     return {
       error: error.message || 'Error fetching categories.',
-      data: null,
+      ok: false,
     };
   }
 
-  return { data, error: null };
+  return { data, ok: true };
 }

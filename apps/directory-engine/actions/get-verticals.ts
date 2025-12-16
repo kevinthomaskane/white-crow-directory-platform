@@ -1,8 +1,11 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import type { ActionsResponse, VerticalMinimal } from '@/lib/types';
 
-export async function getVerticals() {
+export async function getVerticals(): Promise<
+  ActionsResponse<VerticalMinimal[]>
+> {
   const supabase = await createClient();
 
   const {
@@ -12,7 +15,7 @@ export async function getVerticals() {
 
   if (userError || !user) {
     return {
-      data: null,
+      ok: false,
       error: 'You must be logged in to get verticals.',
     };
   }
@@ -24,10 +27,17 @@ export async function getVerticals() {
 
   if (error) {
     return {
-      data: null,
+      ok: false,
       error: error.message || 'Error fetching verticals.',
     };
   }
 
-  return { data, error: null };
+  if (!data || data.length === 0) {
+    return {
+      ok: false,
+      error: 'No verticals found.',
+    };
+  }
+
+  return { ok: true, data };
 }

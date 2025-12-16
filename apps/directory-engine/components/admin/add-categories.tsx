@@ -31,17 +31,16 @@ import { getCategoriesByVertical } from '@/actions/get-categories';
 import { generateCategoriesForVertical } from '@/actions/generate-categories';
 import { addCategoriesToVertical } from '@/actions/add-categories';
 import { normalizeCategoryName, slugify } from '@/lib/utils';
+import { CategoryMinimal, VerticalMinimal } from '@/lib/types';
 
-type Vertical = { id: string; name: string; slug: string };
-type Category = { id: string; name: string; slug: string; vertical_id: string };
-
-export function AddCategories({ verticals }: { verticals: Vertical[] }) {
+export function AddCategories({ verticals }: { verticals: VerticalMinimal[] }) {
   const [verticalOpen, setVerticalOpen] = useState(false);
-  const [selectedVertical, setSelectedVertical] = useState<Vertical | null>(
-    null
-  );
+  const [selectedVertical, setSelectedVertical] =
+    useState<VerticalMinimal | null>(null);
 
-  const [existingCategories, setExistingCategories] = useState<Category[]>([]);
+  const [existingCategories, setExistingCategories] = useState<
+    CategoryMinimal[]
+  >([]);
   const [isLoadingExisting, setIsLoadingExisting] = useState(false);
 
   const [newCategoryInput, setNewCategoryInput] = useState('');
@@ -63,22 +62,24 @@ export function AddCategories({ verticals }: { verticals: Vertical[] }) {
   async function loadExisting(verticalId: string) {
     setIsLoadingExisting(true);
 
-    const { data: existingCategories, error: categoriesError } =
-      await getCategoriesByVertical(verticalId);
-
-    setIsLoadingExisting(false);
-
-    if (!existingCategories || categoriesError) {
-      console.error('Error loading categories:', categoriesError);
+    try {
+      const res = await getCategoriesByVertical(verticalId);
+      if (!res.ok) {
+        setError(res.error || 'Failed to load categories.');
+        return;
+      }
+      setExistingCategories(res.data);
+    } catch (err) {
       setExistingCategories([]);
-      setError(categoriesError || 'Failed to load categories.');
-      return;
+      setError(
+        err instanceof Error ? err.message : 'Failed to load categories.'
+      );
+    } finally {
+      setIsLoadingExisting(false);
     }
-
-    setExistingCategories(existingCategories);
   }
 
-  const handleVerticalSelect = (v: Vertical | null) => {
+  const handleVerticalSelect = (v: VerticalMinimal) => {
     setSelectedVertical(v);
     setVerticalOpen(false);
     setExistingCategories([]);
@@ -113,19 +114,22 @@ export function AddCategories({ verticals }: { verticals: Vertical[] }) {
     setIsGenerating(true);
     setError(null);
 
-    const { data: generatedCategories, error: generateCategoriesError } =
-      await generateCategoriesForVertical({
-        vertical: selectedVertical.name,
-      });
-    setIsGenerating(false);
-
-    if (generateCategoriesError || !generatedCategories) {
-      console.error('Error generating categories:', error);
-      setError(generateCategoriesError || 'Failed to generate categories.');
-      return;
+    try {
+      const res = await generateCategoriesForVertical(selectedVertical.name);
+      if (!res.ok) {
+        setError(res.error || 'Failed to generate categories.');
+        return;
+      }
+      const generatedCategories = res.data;
+      generatedCategories.forEach((c) => addPendingCategory(c));
+    } catch (err) {
+      console.error('Error generating categories:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to generate categories.'
+      );
+    } finally {
+      setIsGenerating(false);
     }
-
-    generatedCategories.forEach((c) => addPendingCategory(c));
   };
 
   const handleSave = async () => {
@@ -135,13 +139,22 @@ export function AddCategories({ verticals }: { verticals: Vertical[] }) {
     setError(null);
     setSuccess(null);
     try {
-      const result = await addCategoriesToVertical({
-        verticalId: selectedVertical.id,
-        categories: pendingCategories,
-      });
+      const res = await addCategoriesToVertical(
+        selectedVertical.id,
+        pendingCategories
+      );
+
+      if (!res.ok) {
+        setError(res.error || 'Failed to save categories.');
+        return;
+      }
+
       setPendingCategories([]);
-      setSuccess(`Added ${result.inserted.length} categories.`);
-      await loadExisting(selectedVertical.id);
+      setExistingCategories([]);
+      setSuccess(
+        `Added ${res.data.length} categories to ${selectedVertical.name}.`
+      );
+      setSelectedVertical(null);
     } catch (err) {
       console.error('Error saving categories:', err);
       setError(

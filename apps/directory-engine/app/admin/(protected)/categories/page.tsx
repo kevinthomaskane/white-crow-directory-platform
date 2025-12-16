@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { AddCategories } from '@/components/admin/add-categories';
+import ErrorDisplay from '@/components/admin/error-display';
 
 export default async function CategoriesPage() {
   const supabase = await createClient();
@@ -11,7 +12,11 @@ export default async function CategoriesPage() {
     .order('name');
 
   if (verticalsError) {
-    console.error('Error fetching verticals:', verticalsError);
+    return (
+      <ErrorDisplay
+        message={`Error loading verticals: ${verticalsError.message}. Try refreshing the page.`}
+      />
+    );
   }
   return (
     <div className="space-y-8">
@@ -24,7 +29,7 @@ export default async function CategoriesPage() {
         </p>
       </div>
 
-      <AddCategories verticals={verticals || []} />
+      <AddCategories verticals={verticals} />
     </div>
   );
 }
