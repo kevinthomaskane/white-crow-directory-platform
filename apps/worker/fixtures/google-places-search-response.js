@@ -1,0 +1,26 @@
+({
+  places: [
+    { id: 'ChIJ5X7nHpEbiYgRLXbUYM5Tnho' },
+    { id: 'ChIJZWugVxEZiYgRIfy0XrtZhqQ' },
+    { id: 'ChIJx3MJVnoZiYgRsNzS5z24EDA' },
+    { id: 'ChIJ1TsYs0sbiYgR7-8ZPKqogsg' },
+    { id: 'ChIJWfU7u5YbiYgRL2bItC_Etz8' },
+    { id: 'ChIJkSOC3pAbiYgR5ufViVrwHgI' },
+    { id: 'ChIJB5HiKJQbiYgRAAV1KrNN-qY' },
+    { id: 'ChIJIyOC3pAbiYgROQwqVihemFM' },
+    { id: 'ChIJ-_8giJYbiYgR6TptEvM9dks' },
+    { id: 'ChIJhUN5XFkbiYgRYxwxStyGths' },
+    { id: 'ChIJXVnLTpEbiYgRpHK8idgAm_o' },
+    { id: 'ChIJad7abWmBjogRE29YQ9I9_dc' },
+    { id: 'ChIJz3egvU1rYogR3Z9kPTZ3rec' },
+    { id: 'ChIJTX3X64UZiYgRE48fBkzlP4k' },
+    { id: 'ChIJ--3S5bojiYgRwohwgZ-Pfk8' },
+    { id: 'ChIJ3Qs8u5YbiYgRTSjzx5L3U4k' },
+    { id: 'ChIJS3B7PTgXiYgR2PiZoAN5Y4g' },
+    { id: 'ChIJQ9rnXF5IfYgRSQ9T7re_Tes' },
+    { id: 'ChIJGcyU2rYjiYgRIwNjOwPJatA' },
+    { id: 'ChIJickEh2wWiYgRWIwi-AHMlx8' },
+  ],
+  nextPageToken:
+    'AZLasHpH5qA8qvnC8IZdd7OaWlYWaE7NUlAuVtMm-yIKPaSCVcMO9Ums6x5zHeNu2dJveuE5KxK4XkkQaigvleCehx22sfPJtsr4I5oVdXt6bfCHJmeDqSHu8E-XCy0P5-g9dg3NYxJi-bfRxlVTkcmcP3-uBsQjnzpOUEgKP2s3x1-W18I562Pfcxn4C8flSrg4XkdRAahwvQ0nmh9ZFVJOBhfPimyHbfn4py9aSWReh7lt2TuFynFVEo8IvXeMe8RWlX3qTw4yxl4lzXQjPRHiiEnkyj9MLXXl4yoiqkRmcYrcnASczNX4DAmU-Q56h5Rpg70Rht_3eHVT1NwtOukADAGjA9dEUDBILkyEU746ol25MmG9xQPDCwtXUIJkJCy4Co0igh8GmoqRWFExn9GYGbmXL1j4DuGD9zTNVrcibTpoGc_8GbbgFOoSF2D9XHe2d2RWVj_ZwGFtUpO8NULEv_V1XAYRr-QDaDUrIfC2oakTG6O0bRNcnd0_uluxJxfv5SVE2nVYQkr4rN7exoapR5wp4uA8aWyGy8SWZz6k98UOiIJPHE_udqm4O2t2zs-JQpvMtLaVR05UJLPbb8u1xFwVY0YIk7cX4kMzaHSOxIO0K07i2vyB483FSTgvHXaq4WszjxhYJXroFaR4QZQeqkpXNAvYv2zenLYKHSKrsIa1VSsidCuNq3oAIU-mHmCPuRTJV-k1ub38sSysoT0w8wxZEPLudF_pQTujGdlMjOO4ge4RkSbZf9vVwU9ZTuQ74b9Ih9ikUTjDRjtE-Uuq8hc4Ma6GGWPR0P27C79bpsQQ8qnr-zKTYDIojn4EqEj_DSbtAB6tVHI',
+});

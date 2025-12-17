@@ -34,7 +34,10 @@ export async function submitGooglePlacesSearchJobs(
   for (const payload of payloads) {
     const result = GooglePlacesSearchJobPayloadSchema.safeParse(payload);
     if (!result.success) {
-      return { ok: false, error: `Invalid job payload for ${payload.query}` };
+      return {
+        ok: false,
+        error: `Invalid job payload for ${payload.queryText}`,
+      };
     }
   }
 

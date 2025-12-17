@@ -6,3 +6,4 @@ export {
   type JobType,
   GooglePlacesSearchJobPayloadSchema,
 } from './jobs';
+export type ReviewSource = 'google_places';

@@ -259,9 +259,9 @@ export function AddBusinessesForm({
         const q = `${category.name} ${selectedVertical.name} ${city.name} ${selectedState.code}`;
         if (removedQueries.has(q)) continue;
         payloads.push({
-          vertical: selectedVertical.id,
-          query: q,
-          category: category.id,
+          verticalId: selectedVertical.id,
+          queryText: q,
+          categoryId: category.id,
         });
       }
     }
@@ -279,7 +279,7 @@ export function AddBusinessesForm({
       for (const payload of payloads) {
         const result = GooglePlacesSearchJobPayloadSchema.safeParse(payload);
         if (!result.success) {
-          setError(`Invalid job payload for ${payload.query}`);
+          setError(`Invalid job payload for ${payload.queryText}`);
           return;
         }
       }

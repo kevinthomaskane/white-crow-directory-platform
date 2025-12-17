@@ -92,7 +92,7 @@ export type Database = {
           id: string
           rating: number | null
           raw: Json | null
-          review_id: string | null
+          review_id: string
           source: string
           text: string | null
           time: string | null
@@ -106,7 +106,7 @@ export type Database = {
           id?: string
           rating?: number | null
           raw?: Json | null
-          review_id?: string | null
+          review_id: string
           source: string
           text?: string | null
           time?: string | null
@@ -120,7 +120,7 @@ export type Database = {
           id?: string
           rating?: number | null
           raw?: Json | null
-          review_id?: string | null
+          review_id?: string
           source?: string
           text?: string | null
           time?: string | null
@@ -282,6 +282,8 @@ export type Database = {
           finished_at: string | null
           id: string
           job_type: string
+          locked_at: string | null
+          locked_by: string | null
           max_attempts: number
           meta: Json | null
           payload: Json
@@ -299,6 +301,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_type: string
+          locked_at?: string | null
+          locked_by?: string | null
           max_attempts?: number
           meta?: Json | null
           payload: Json
@@ -316,6 +320,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_type?: string
+          locked_at?: string | null
+          locked_by?: string | null
           max_attempts?: number
           meta?: Json | null
           payload?: Json
@@ -396,7 +402,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_next_job: {
+        Args: { p_worker_id: string }
+        Returns: {
+          attempt_count: number
+          id: string
+          job_type: string
+          payload: Json
+          run_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

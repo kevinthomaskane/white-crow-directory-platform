@@ -1,0 +1,19 @@
+{
+  "id": "c8ca679a-f0c9-4bf7-bbf5-adc28b159b39",
+  "job_type": "google_places_search",
+  "payload": "{\"queryText\": \"Bankruptcy Law Law Firms Birmingham AL\", \"categoryId\": \"85ce4f31-1968-46a3-b63d-f7bd79843a46\", \"verticalId\": \"f3dfcab9-a56a-4534-8901-2433064c91c0\"}",
+  "status": "processing",
+  "progress": 0,
+  "meta": "{}",
+  "error": null,
+  "worker_id": "65041479-0542-44ec-8b5d-2cc2e2a3abaa",
+  "created_at": "2025-12-16 22:34:52.16455+00",
+  "started_at": "2025-12-16 22:48:25.990059+00",
+  "finished_at": null,
+  "attempt_count": 1,
+  "max_attempts": 3,
+  "run_id": "fed59f28-a81f-4cb4-8f57-05afd9025b4d",
+  "updated_at": "2025-12-16 22:48:25.990059+00",
+  "locked_at": "2025-12-16 22:48:25.990059+00",
+  "locked_by": "65041479-0542-44ec-8b5d-2cc2e2a3abaa"
+}
