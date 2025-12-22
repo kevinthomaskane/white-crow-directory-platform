@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,86 +12,44 @@ import type {
   GooglePlacesSearchJobPayload,
 } from '@white-crow/shared';
 
-export type StatusFilter = 'pending_processing' | 'completed' | 'failed';
-
-const STATUS_MAP: Record<StatusFilter, JobStatus[]> = {
-  pending_processing: ['pending', 'processing'],
-  completed: ['completed'],
-  failed: ['failed'],
-};
+type StatusFilter = 'pending_processing' | 'completed' | 'failed';
 
 type JobsListProps = {
   jobs: JobMinimal[];
-  activeFilter: StatusFilter;
 };
 
-export function JobsList({ jobs: initialJobs, activeFilter }: JobsListProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function JobsList({ jobs: initialJobs }: JobsListProps) {
   const [jobs, setJobs] = useState<JobMinimal[]>(initialJobs);
-
-  // Sync with server-rendered data when filter changes
-  useEffect(() => {
-    setJobs(initialJobs);
-  }, [initialJobs]);
+  const [activeFilter, setActiveFilter] =
+    useState<StatusFilter>('pending_processing');
 
   // Subscribe to realtime updates
   useEffect(() => {
     const supabase = createClient();
-    const statuses = STATUS_MAP[activeFilter];
 
-    const channel = supabase
-      .channel('jobs-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'jobs',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newJob = payload.new as JobMinimal;
-            if (statuses.includes(newJob.status as JobStatus)) {
-              setJobs((prev) => [newJob, ...prev]);
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedJob = payload.new as JobMinimal;
-            const wasInList = jobs.some((j) => j.id === updatedJob.id);
-            const shouldBeInList = statuses.includes(
-              updatedJob.status as JobStatus
-            );
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('jobs')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-            if (wasInList && shouldBeInList) {
-              // Update existing job
-              setJobs((prev) =>
-                prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-              );
-            } else if (wasInList && !shouldBeInList) {
-              // Remove job (status changed to different filter)
-              setJobs((prev) => prev.filter((j) => j.id !== updatedJob.id));
-            } else if (!wasInList && shouldBeInList) {
-              // Add job (status changed to match current filter)
-              setJobs((prev) => [updatedJob, ...prev]);
-            }
-          } else if (payload.eventType === 'DELETE') {
-            const deletedJob = payload.old as { id: string };
-            setJobs((prev) => prev.filter((j) => j.id !== deletedJob.id));
-          }
-        }
-      )
-      .subscribe();
+      setJobs(data ?? []);
+    }, 2000);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeFilter, jobs]);
+    return () => clearInterval(interval);
+  }, []);
 
-  function handleFilterChange(filter: StatusFilter) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('status', filter);
-    router.push(`?${params.toString()}`);
-  }
+  const filteredJobs = jobs.filter((job) => {
+    const status = job.status as JobStatus;
+    switch (activeFilter) {
+      case 'pending_processing':
+        return status === 'pending' || status === 'processing';
+      case 'completed':
+        return status === 'completed';
+      case 'failed':
+        return status === 'failed';
+    }
+  });
 
   return (
     <>
@@ -102,19 +59,19 @@ export function JobsList({ jobs: initialJobs, activeFilter }: JobsListProps) {
           variant={
             activeFilter === 'pending_processing' ? 'default' : 'outline'
           }
-          onClick={() => handleFilterChange('pending_processing')}
+          onClick={() => setActiveFilter('pending_processing')}
         >
           Pending/Processing
         </Button>
         <Button
           variant={activeFilter === 'completed' ? 'default' : 'outline'}
-          onClick={() => handleFilterChange('completed')}
+          onClick={() => setActiveFilter('completed')}
         >
           Completed
         </Button>
         <Button
           variant={activeFilter === 'failed' ? 'default' : 'outline'}
-          onClick={() => handleFilterChange('failed')}
+          onClick={() => setActiveFilter('failed')}
         >
           Failed
         </Button>
@@ -122,10 +79,10 @@ export function JobsList({ jobs: initialJobs, activeFilter }: JobsListProps) {
 
       {/* Jobs List */}
       <div className="space-y-4">
-        {jobs.length === 0 ? (
+        {filteredJobs.length === 0 ? (
           <p className="text-muted-foreground">No jobs found.</p>
         ) : (
-          jobs.map((job) => <JobCard key={job.id} job={job} />)
+          filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
         )}
       </div>
     </>

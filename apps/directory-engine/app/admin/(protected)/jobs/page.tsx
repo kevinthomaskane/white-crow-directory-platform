@@ -1,33 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
-import { JobsList, type StatusFilter } from '@/components/admin/jobs-list';
+import { JobsList } from '@/components/admin/jobs-list';
 import ErrorDisplay from '@/components/admin/error-display';
-import type { JobStatus } from '@white-crow/shared';
 
-const STATUS_MAP: Record<StatusFilter, JobStatus[]> = {
-  pending_processing: ['pending', 'processing'],
-  completed: ['completed'],
-  failed: ['failed'],
-};
-
-const VALID_FILTERS: StatusFilter[] = [
-  'pending_processing',
-  'completed',
-  'failed',
-];
-
-type JobsPageProps = {
-  searchParams: Promise<{ status?: string }>;
-};
-
-export default async function JobsPage({ searchParams }: JobsPageProps) {
-  const { status } = await searchParams;
-
-  const activeFilter: StatusFilter = VALID_FILTERS.includes(
-    status as StatusFilter
-  )
-    ? (status as StatusFilter)
-    : 'pending_processing';
-
+export default async function JobsPage() {
   const supabase = await createClient();
 
   const { data: jobs, error } = await supabase
@@ -35,7 +10,6 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     .select(
       'id, job_type, status, progress, error, meta, payload, created_at, updated_at'
     )
-    .in('status', STATUS_MAP[activeFilter])
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -60,7 +34,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           Manage jobs for your directory sites.
         </p>
       </div>
-      <JobsList jobs={jobs} activeFilter={activeFilter} />
+      <JobsList jobs={jobs} />
     </div>
   );
 }

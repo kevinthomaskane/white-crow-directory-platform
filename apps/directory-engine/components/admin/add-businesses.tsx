@@ -295,7 +295,7 @@ export function AddBusinessesForm({
       const { jobCount } = res.data;
       setSuccess(`Successfully submitted ${jobCount} jobs. Redirecting...`);
       setTimeout(() => {
-        router.push('/admin');
+        router.push('/admin/jobs');
       }, 1500);
     } catch (err) {
       console.error('Error submitting job:', err);
