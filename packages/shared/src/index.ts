@@ -2,6 +2,7 @@ export * from './supabase/service-role';
 export type * from './supabase/database';
 export {
   type GooglePlacesSearchJobPayload,
+  type GooglePlacesSearchJobMeta,
   type JobStatus,
   type JobType,
   GooglePlacesSearchJobPayloadSchema,

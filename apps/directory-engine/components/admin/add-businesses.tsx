@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,8 @@ export function AddBusinessesForm({
   verticals,
   states,
 }: AddBusinessesFormProps) {
+  const router = useRouter();
+
   // vertical -> categories
   const [verticalOpen, setVerticalOpen] = useState(false);
   const [selectedVertical, setSelectedVertical] =
@@ -289,14 +292,11 @@ export function AddBusinessesForm({
         return;
       }
 
-      const { runId, jobCount } = res.data;
-      // reset
-      setSelectedVertical(null);
-      setSelectedCategoryIds([]);
-      setSelectedState(null);
-      setSelectedCityIds([]);
-      setRemovedQueries(new Set());
-      setSuccess(`Successfully submitted ${jobCount} jobs. Run ID: ${runId}`);
+      const { jobCount } = res.data;
+      setSuccess(`Successfully submitted ${jobCount} jobs. Redirecting...`);
+      setTimeout(() => {
+        router.push('/admin');
+      }, 1500);
     } catch (err) {
       console.error('Error submitting job:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit job.');

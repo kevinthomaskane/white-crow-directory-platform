@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { AddBusinessesForm } from '@/components/admin/add-businesses';
 import ErrorDisplay from '@/components/admin/error-display';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function AddBusinessesPage() {
   const supabase = await createClient();
@@ -31,18 +32,23 @@ export default async function AddBusinessesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">
-          Add Businesses
-        </h2>
-        <p className="mt-1 text-muted-foreground">
-          Select a vertical, categories, a state, and the cities you want to
-          target.
+        <h1 className="text-3xl font-bold tracking-tight">Add Businesses</h1>
+        <p className="mt-2 text-muted-foreground">
+          Submit Google Places search jobs to populate your directory with businesses.
         </p>
       </div>
 
-      <div className="max-w-2xl">
-        <AddBusinessesForm verticals={verticals} states={states} />
-      </div>
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Create Search Jobs</CardTitle>
+          <CardDescription>
+            Select a vertical, categories, state, and cities to generate search queries.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AddBusinessesForm verticals={verticals} states={states} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

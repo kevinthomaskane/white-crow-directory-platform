@@ -4,6 +4,7 @@ type Vertical = Database['public']['Tables']['verticals']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
 type State = Database['public']['Tables']['states']['Row'];
 type City = Database['public']['Tables']['cities']['Row'];
+type JobRow = Database['public']['Tables']['jobs']['Row'];
 type JobInsert = Database['public']['Tables']['jobs']['Insert'];
 
 export type VerticalMinimal = {
@@ -35,6 +36,18 @@ export type CityMinimal = {
 export type JobInsertMinimal = JobInsert & {
   job_type: JobType;
   status: JobStatus;
+};
+
+export type JobMinimal = {
+  id: JobRow['id'];
+  job_type: JobRow['job_type'];
+  status: JobRow['status'];
+  progress: JobRow['progress'];
+  error: JobRow['error'];
+  meta: JobRow['meta'];
+  payload: JobRow['payload'];
+  created_at: JobRow['created_at'];
+  updated_at: JobRow['updated_at'];
 };
 
 export type ActionsResponse<T> =

@@ -13,3 +13,10 @@ export const GooglePlacesSearchJobPayloadSchema = z.object({
 export type GooglePlacesSearchJobPayload = z.infer<
   typeof GooglePlacesSearchJobPayloadSchema
 >;
+
+export type GooglePlacesSearchJobMeta = {
+  total_places: number;
+  processed_places: number;
+  place_ids: string[];
+  processed_place_ids: string[];
+};

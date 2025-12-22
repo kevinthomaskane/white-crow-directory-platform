@@ -1,10 +1,9 @@
-import { ReviewSource } from '@white-crow/shared';
+import {
+  ReviewSource,
+  type GooglePlacesSearchJobMeta,
+} from '@white-crow/shared';
 import { supabase } from '../lib/supabase/client';
-import type {
-  BusinessReviewInsert,
-  GooglePlacesSearchJob,
-  GooglePlacesSearchJobMeta,
-} from '../lib/types';
+import type { BusinessReviewInsert, GooglePlacesSearchJob } from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
 
 type PlaceMinimal = {
@@ -47,6 +46,35 @@ const placeDetailsFieldMask = [
   'reviews',
   'googleMapsUri',
 ];
+
+const MAX_RETRIES = 2;
+const BASE_DELAY_MS = 500;
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  attempt = 0
+): Promise<Response> {
+  const res = await fetch(url, options);
+
+  if (res.ok) {
+    return res;
+  }
+
+  // Retry on 5xx errors or 429 (rate limit)
+  const shouldRetry = res.status >= 500 || res.status === 429;
+
+  if (shouldRetry && attempt < MAX_RETRIES) {
+    const delay = BASE_DELAY_MS * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms...
+    console.log(
+      `  Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`
+    );
+    await new Promise((r) => setTimeout(r, delay));
+    return fetchWithRetry(url, options, attempt + 1);
+  }
+
+  return res;
+}
 
 export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
   const PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
@@ -100,7 +128,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
       `\n\n\n\n\n[Job ${job.id}] Processing place ${placeNumber}/${places.length} (${place.id})`
     );
 
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `https://places.googleapis.com/v1/places/${place.id}`,
       {
         method: 'GET',
@@ -137,12 +165,10 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           formatted_address: placeDetails.formattedAddress || null,
           website: placeDetails.websiteUri || null,
           phone: placeDetails.nationalPhoneNumber || null,
-          description: placeDetails.editorialSummary?.text || null,
           latitude: placeDetails.location?.latitude || null,
           longitude: placeDetails.location?.longitude || null,
           updated_at: new Date().toISOString(),
           raw: placeDetails,
-          created_at: new Date().toISOString(),
           editorial_summary: placeDetails.editorialSummary?.text || null,
           city,
           state,
@@ -165,7 +191,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     }
 
     console.log(
-      `[Job ${job.id}] ✓ Upserted business "${businessName}" (ID: ${businessData.id})`
+      `[Job ${job.id}] ✅  Upserted business "${businessName}" (ID: ${businessData.id})`
     );
 
     // Add new record to business_categories joining table
@@ -184,16 +210,11 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
         `[Job ${job.id}] Failed to insert business category for "${businessName}" (${businessData.id}):`,
         businessCategoryError
       );
-      // Delete the business if the category insertion failed
-      await supabase.from('businesses').delete().eq('id', businessData.id);
-      console.log(
-        `[Job ${job.id}] Rolled back business "${businessName}" due to category insertion failure`
-      );
       continue;
     }
 
     console.log(
-      `[Job ${job.id}] ✓ Associated category ${categoryId} with business "${businessName}"`
+      `[Job ${job.id}] ✅ Associated category ${categoryId} with business "${businessName}"`
     );
 
     if (placeDetails.reviews?.length > 0) {
@@ -227,17 +248,25 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           businessReviewsInsertError
         );
       } else {
-        await supabase.from('business_review_sources').upsert(
-          {
-            business_id: businessData.id,
-            provider: source,
-            rating: placeDetails.rating,
-            review_count: placeDetails.reviews?.length || 0,
-            url: placeDetails.googleMapsUri || null,
-            last_synced_at: new Date().toISOString(),
-          },
-          { onConflict: 'business_id,provider' }
-        );
+        const { error: reviewSourceError } = await supabase
+          .from('business_review_sources')
+          .upsert(
+            {
+              business_id: businessData.id,
+              provider: source,
+              rating: placeDetails.rating,
+              review_count: placeDetails.reviews?.length || 0,
+              url: placeDetails.googleMapsUri || null,
+              last_synced_at: new Date().toISOString(),
+            },
+            { onConflict: 'business_id,provider' }
+          );
+        if (reviewSourceError) {
+          console.error(
+            `[Job ${job.id}] Failed to upsert review source for "${businessName}":`,
+            reviewSourceError
+          );
+        }
         console.log(
           `[Job ${job.id}] ✓ Inserted ${reviewCount} review(s) for "${businessName}"`
         );
@@ -276,48 +305,41 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
   await markJobCompleted(job.id, meta);
 }
 
-function parseAddressComponents(addressComponents: AddressComponent[]) {
-  const components = {
+function parseAddressComponents(components: AddressComponent[]) {
+  const result = {
     streetNumber: '',
     route: '',
     city: '',
     state: '',
     postalCode: '',
   };
-  for (const component of addressComponents) {
+
+  const typeMap: Record<string, keyof typeof result> = {
+    street_number: 'streetNumber',
+    route: 'route',
+    locality: 'city',
+    administrative_area_level_1: 'state',
+    postal_code: 'postalCode',
+  };
+
+  for (const component of components) {
     for (const type of component.types) {
-      if (type === 'street_number' && !components.streetNumber) {
-        components.streetNumber = component.longText;
-        break;
-      }
-      if (type === 'route' && !components.route) {
-        components.route = component.longText;
-        break;
-      }
-      if (type === 'locality' && !components.city) {
-        components.city = component.longText;
-        break;
-      }
-      if (type === 'administrative_area_level_1' && !components.state) {
-        components.state = component.longText;
-        break;
-      }
-      if (type === 'postal_code' && !components.postalCode) {
-        components.postalCode = component.longText;
-        break;
-      }
+      const key = typeMap[type];
+      if (!key) continue;
+      if (result[key]) continue;
+
+      result[key] = component.longText;
+      break; // stop once we matched a relevant type
     }
   }
 
-  const streetAddress = [components.streetNumber, components.route]
-    .filter(Boolean)
-    .join(' ');
-
   return {
-    state: components.state,
-    city: components.city,
-    postalCode: components.postalCode,
-    streetAddress,
+    streetAddress: [result.streetNumber, result.route]
+      .filter(Boolean)
+      .join(' '),
+    city: result.city,
+    state: result.state,
+    postalCode: result.postalCode,
   };
 }
 

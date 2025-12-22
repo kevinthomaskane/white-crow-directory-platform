@@ -8,7 +8,7 @@
       "path": "apps/directory-engine"
     },
     {
-      "path": "apps/worker-api"
+      "path": "apps/worker"
     }
   ],
   "compilerOptions": {

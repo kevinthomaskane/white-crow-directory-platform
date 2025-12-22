@@ -37,17 +37,3 @@ export async function markJobFailed(jobId: string, errorMessage: string) {
     console.error('Failed to mark job as failed:', error);
   }
 }
-
-export async function updateJobMeta<T extends Json>(jobId: string, meta: T) {
-  const { error } = await supabase
-    .from('jobs')
-    .update({
-      updated_at: new Date().toISOString(),
-      meta,
-    })
-    .eq('id', jobId);
-
-  if (error) {
-    console.error('Failed to mark job as failed:', error);
-  }
-}

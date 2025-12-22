@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { AdminNav } from '@/components/admin/admin-nav';
+import { Sidebar } from '@/components/admin/sidebar';
 
 export default async function ProtectedAdminLayout({
   children,
@@ -17,9 +17,11 @@ export default async function ProtectedAdminLayout({
   }
 
   return (
-    <>
-      <AdminNav user={user} />
-      <main className="p-6">{children}</main>
-    </>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar user={user} />
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8">{children}</div>
+      </main>
+    </div>
   );
 }
