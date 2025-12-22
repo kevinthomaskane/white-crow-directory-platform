@@ -355,6 +355,108 @@ export type Database = {
         }
         Relationships: []
       }
+      site_categories: {
+        Row: {
+          category_id: string
+          site_id: string
+        }
+        Insert: {
+          category_id: string
+          site_id: string
+        }
+        Update: {
+          category_id?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_categories_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_cities: {
+        Row: {
+          city_id: string
+          site_id: string
+        }
+        Insert: {
+          city_id: string
+          site_id: string
+        }
+        Update: {
+          city_id?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_cities_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_cities_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sites: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          state_id: string
+          updated_at: string
+          vertical_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          state_id: string
+          updated_at?: string
+          vertical_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          state_id?: string
+          updated_at?: string
+          vertical_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sites_vertical_id_fkey"
+            columns: ["vertical_id"]
+            isOneToOne: false
+            referencedRelation: "verticals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       states: {
         Row: {
           code: string

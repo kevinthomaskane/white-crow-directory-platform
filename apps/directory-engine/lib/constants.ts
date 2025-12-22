@@ -4,4 +4,5 @@ export const ADMIN_SITE_NAV = [
   { title: 'Categories', href: '/admin/categories' },
   { title: 'Add Businesses', href: '/admin/add-businesses' },
   { title: 'Job Statuses', href: '/admin/jobs' },
+  { title: 'Sites', href: '/admin/sites' },
 ];

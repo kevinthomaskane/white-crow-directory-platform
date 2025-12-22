@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronRight,
   Clock,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ const navIcons: Record<string, React.ReactNode> = {
   '/admin/categories': <FolderTree className="h-4 w-4" />,
   '/admin/add-businesses': <Building2 className="h-4 w-4" />,
   '/admin/jobs': <Clock className="h-4 w-4" />,
+  '/admin/sites': <Globe className="h-4 w-4" />,
 };
 
 export function Sidebar({ user }: { user: User }) {

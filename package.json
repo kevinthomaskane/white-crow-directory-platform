@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "supabase:types": "node packages/shared/scripts/generate-supabase-types.js",
-    "supabase:login": "npx supabase login"
+    "supabase:login": "npx supabase login",
+    "supabase:schema": "npx supabase db dump -f supabase/schema.sql"
   }
 }

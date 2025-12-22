@@ -57,6 +57,9 @@ pnpm supabase:login
 - Auto-generated from Supabase in `packages/shared/src/supabase/database.ts`
 - Exported via `@white-crow/shared` package for type-safe queries
 
+**Database Schema**:
+- Auto-generated from Supabase in `supabase/schema.sql`
+
 ### Data Model
 
 Core entities: `businesses`, `categories`, `verticals`, `business_reviews`, `business_review_sources`
