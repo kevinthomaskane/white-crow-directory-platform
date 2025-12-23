@@ -168,7 +168,8 @@ CREATE TABLE IF NOT EXISTS "public"."businesses" (
     "latitude" double precision,
     "longitude" double precision,
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "city_id" "uuid"
 );
 
 
@@ -238,6 +239,24 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "business_id" "uuid" NOT NULL,
+    "site_id" "uuid" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "stripe_customer_id" "text",
+    "stripe_subscription_id" "text",
+    "stripe_subscription_status" "text",
+    "is_claimed" boolean DEFAULT false,
+    "claimed_at" timestamp with time zone,
+    "claimed_by" "text"
+);
+
+
+ALTER TABLE "public"."site_businesses" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."site_categories" (
@@ -362,6 +381,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."site_businesses"
+    ADD CONSTRAINT "site_businesses_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."site_categories"
     ADD CONSTRAINT "site_categories_pkey" PRIMARY KEY ("site_id", "category_id");
 
@@ -427,6 +451,11 @@ ALTER TABLE ONLY "public"."business_reviews"
 
 
 
+ALTER TABLE ONLY "public"."businesses"
+    ADD CONSTRAINT "businesses_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
+
+
+
 ALTER TABLE ONLY "public"."categories"
     ADD CONSTRAINT "categories_vertical_id_fkey" FOREIGN KEY ("vertical_id") REFERENCES "public"."verticals"("id") ON DELETE CASCADE;
 
@@ -439,6 +468,16 @@ ALTER TABLE ONLY "public"."cities"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."site_businesses"
+    ADD CONSTRAINT "site_businesses_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."site_businesses"
+    ADD CONSTRAINT "site_businesses_site_id_fkey" FOREIGN KEY ("site_id") REFERENCES "public"."sites"("id") ON DELETE CASCADE;
 
 
 
@@ -504,6 +543,10 @@ CREATE POLICY "authenticated users have full access" ON "public"."jobs" USING ((
 
 
 
+CREATE POLICY "authenticated users have full access" ON "public"."site_businesses" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+
+
+
 CREATE POLICY "authenticated users have full access" ON "public"."site_categories" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
 
 
@@ -546,6 +589,9 @@ ALTER TABLE "public"."jobs" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."site_businesses" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."site_categories" ENABLE ROW LEVEL SECURITY;
@@ -801,6 +847,12 @@ GRANT ALL ON TABLE "public"."jobs" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."site_businesses" TO "anon";
+GRANT ALL ON TABLE "public"."site_businesses" TO "authenticated";
+GRANT ALL ON TABLE "public"."site_businesses" TO "service_role";
 
 
 

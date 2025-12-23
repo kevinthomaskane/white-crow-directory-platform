@@ -3,6 +3,8 @@ export type * from './supabase/database';
 export {
   type GooglePlacesSearchJobPayload,
   type GooglePlacesSearchJobMeta,
+  type AssociateSiteBusinessesJobPayload,
+  type AssociateSiteBusinessesJobMeta,
   type JobStatus,
   type JobType,
   GooglePlacesSearchJobPayloadSchema,

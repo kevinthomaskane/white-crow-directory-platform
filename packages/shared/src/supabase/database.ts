@@ -138,6 +138,7 @@ export type Database = {
       businesses: {
         Row: {
           city: string | null
+          city_id: string | null
           created_at: string | null
           description: string | null
           editorial_summary: string | null
@@ -159,6 +160,7 @@ export type Database = {
         }
         Insert: {
           city?: string | null
+          city_id?: string | null
           created_at?: string | null
           description?: string | null
           editorial_summary?: string | null
@@ -180,6 +182,7 @@ export type Database = {
         }
         Update: {
           city?: string | null
+          city_id?: string | null
           created_at?: string | null
           description?: string | null
           editorial_summary?: string | null
@@ -199,7 +202,15 @@ export type Database = {
           updated_at?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "businesses_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -354,6 +365,63 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      site_businesses: {
+        Row: {
+          business_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          id: string
+          is_claimed: boolean | null
+          site_id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          stripe_subscription_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          is_claimed?: boolean | null
+          site_id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          is_claimed?: boolean | null
+          site_id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_businesses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_businesses_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_categories: {
         Row: {

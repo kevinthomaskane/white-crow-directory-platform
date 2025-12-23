@@ -236,10 +236,21 @@ export function CreateSiteForm({ verticals, states }: CreateSiteFormProps) {
         return;
       }
 
-      setSuccess(`Site "${res.data.name}" created successfully. Redirecting...`);
-      setTimeout(() => {
-        router.push('/admin/sites');
-      }, 1500);
+      if (res.data.jobCreated) {
+        setSuccess(
+          `Site "${res.data.name}" created successfully. Business associating job queued in database. Redirecting...`
+        );
+        setTimeout(() => {
+          router.push('/admin/jobs');
+        }, 1500);
+      } else {
+        setSuccess(
+          `Site "${res.data.name}" created successfully, but no job inserted into database. Manually trigger the business associating job. Redirecting...`
+        );
+        setTimeout(() => {
+          router.push('/admin/sites');
+        }, 1500);
+      }
     } catch (err) {
       console.error('Error creating site:', err);
       setError(err instanceof Error ? err.message : 'Failed to create site.');

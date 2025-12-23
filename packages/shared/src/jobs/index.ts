@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
-export type JobType = 'google_places_search';
+export type JobType = 'google_places_search' | 'associate_site_businesses';
 
 export const GooglePlacesSearchJobPayloadSchema = z.object({
   verticalId: z.uuid(),
@@ -19,4 +19,17 @@ export type GooglePlacesSearchJobMeta = {
   processed_places: number;
   place_ids: string[];
   processed_place_ids: string[];
+};
+
+export const AssociateSiteBusinessesJobPayloadSchema = z.object({
+  siteId: z.uuid(),
+});
+
+export type AssociateSiteBusinessesJobPayload = z.infer<
+  typeof AssociateSiteBusinessesJobPayloadSchema
+>;
+
+export type AssociateSiteBusinessesJobMeta = {
+  total_businesses: number;
+  associated_businesses: number;
 };

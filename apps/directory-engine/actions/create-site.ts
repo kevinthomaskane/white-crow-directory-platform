@@ -2,6 +2,10 @@
 
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse } from '@/lib/types';
+import type {
+  AssociateSiteBusinessesJobPayload,
+  JobType,
+} from '@white-crow/shared';
 
 type CreateSitePayload = {
   name: string;
@@ -14,6 +18,7 @@ type CreateSitePayload = {
 type SiteCreated = {
   id: string;
   name: string;
+  jobCreated?: boolean;
 };
 
 export async function createSite(
@@ -135,8 +140,25 @@ export async function createSite(
     };
   }
 
+  // Create job to associate businesses with the site
+  const jobPayload: AssociateSiteBusinessesJobPayload = {
+    siteId: site.id,
+  };
+
+  const jobType: JobType = 'associate_site_businesses';
+  const { error: jobError } = await supabase.from('jobs').insert({
+    job_type: jobType,
+    payload: jobPayload,
+    status: 'pending',
+  });
+
+  if (jobError) {
+    // Log but don't fail - site was created successfully, job can be retried
+    console.error('Error creating associate_site_businesses job:', jobError);
+  }
+
   return {
     ok: true,
-    data: site,
+    data: { ...site, jobCreated: !jobError },
   };
 }
