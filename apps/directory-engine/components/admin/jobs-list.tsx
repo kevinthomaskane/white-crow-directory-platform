@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import type {
   GooglePlacesSearchJobMeta,
   GooglePlacesSearchJobPayload,
 } from '@white-crow/shared';
+import { retryJob } from '@/actions/retry-job';
 
 type StatusFilter = 'pending_processing' | 'completed' | 'failed';
 
@@ -31,7 +32,7 @@ export function JobsList({ jobs: initialJobs }: JobsListProps) {
       const { data } = await supabase
         .from('jobs')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       setJobs(data ?? []);
     }, 2000);
@@ -90,7 +91,19 @@ export function JobsList({ jobs: initialJobs }: JobsListProps) {
 }
 
 function JobCard({ job }: { job: JobMinimal }) {
+  const [isPending, startTransition] = useTransition();
   const statusVariant = getStatusVariant(job.status);
+  const canRetry =
+    job.status === 'failed' && job.attempt_count < job.max_attempts;
+
+  const handleRetry = () => {
+    startTransition(async () => {
+      const result = await retryJob(job.id);
+      if (!result.ok) {
+        console.error('Failed to retry job:', result.error);
+      }
+    });
+  };
 
   return (
     <Card>
@@ -129,6 +142,25 @@ function JobCard({ job }: { job: JobMinimal }) {
         {job.error && (
           <div className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
             {job.error}
+          </div>
+        )}
+
+        {/* Failed Job Info: Attempts & Retry */}
+        {job.status === 'failed' && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Attempts: {job.attempt_count}/{job.max_attempts}
+            </span>
+            {canRetry && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                disabled={isPending}
+              >
+                {isPending ? 'Retrying...' : 'Retry'}
+              </Button>
+            )}
           </div>
         )}
 

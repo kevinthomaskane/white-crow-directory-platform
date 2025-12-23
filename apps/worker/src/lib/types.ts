@@ -1,4 +1,8 @@
-import { Database, GooglePlacesSearchJobPayload } from '@white-crow/shared';
+import {
+  Database,
+  GooglePlacesSearchJobPayload,
+  AssociateSiteBusinessesJobPayload,
+} from '@white-crow/shared';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
 
@@ -11,4 +15,12 @@ export type GooglePlacesSearchJob = {
   attempt_count: Job['attempt_count'];
   run_id: Job['run_id'];
   payload: GooglePlacesSearchJobPayload;
+};
+
+export type AssociateSiteBusinessesJob = {
+  job_type: 'associate_site_businesses';
+  id: Job['id'];
+  attempt_count: Job['attempt_count'];
+  run_id: Job['run_id'];
+  payload: AssociateSiteBusinessesJobPayload;
 };

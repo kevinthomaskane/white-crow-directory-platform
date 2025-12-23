@@ -15,7 +15,7 @@ type GooglePlacesSearchResponse = {
 };
 
 type AddressComponent = {
-  types: string[];
+  types?: string[];
   longText: string;
 };
 
@@ -30,6 +30,47 @@ type Review = {
     uri: string;
   };
 };
+
+/**
+ * Creates a cached city lookup function that queries the database on demand
+ * and caches results for the duration of the job.
+ */
+function createCityLookupCache() {
+  const cache = new Map<string, string | null>();
+
+  return async function lookupCityId(
+    city: string,
+    state: string
+  ): Promise<string | null> {
+    const cityName = city?.trim().toLowerCase();
+    const stateName = state?.trim().toLowerCase();
+
+    if (!cityName || !stateName) return null;
+
+    const key = `${cityName}|${stateName}`;
+
+    if (cache.has(key)) {
+      return cache.get(key) || null;
+    }
+
+    // Query database for this city/state combination
+    const { data, error } = await supabase
+      .from('cities')
+      .select('id, states!inner(name)')
+      .ilike('name', cityName)
+      .ilike('states.name', stateName)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      cache.set(key, null);
+      return null;
+    }
+
+    cache.set(key, data.id);
+    return data.id;
+  };
+}
 
 const placeDetailsFieldMask = [
   'id',
@@ -83,6 +124,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
   }
 
   const { queryText, categoryId } = job.payload;
+  const lookupCityId = createCityLookupCache();
 
   console.log(`[Job ${job.id}] Starting Google Places search job`);
   console.log(`[Job ${job.id}] Query: "${queryText}"`);
@@ -155,6 +197,9 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
       placeDetails.addressComponents || []
     );
 
+    // Look up city_id from city and state
+    const cityId = await lookupCityId(city, state);
+
     // Upsert business into the database
     const { data: businessData, error: businessInsertError } = await supabase
       .from('businesses')
@@ -172,6 +217,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           editorial_summary: placeDetails.editorialSummary?.text || null,
           city,
           state,
+          city_id: cityId,
           hours: placeDetails.regularOpeningHours || null,
           main_photo_name: placeDetails.photos?.[0]?.name || null,
           postal_code: postalCode,
@@ -323,7 +369,7 @@ function parseAddressComponents(components: AddressComponent[]) {
   };
 
   for (const component of components) {
-    for (const type of component.types) {
+    for (const type of component.types ?? []) {
       const key = typeMap[type];
       if (!key) continue;
       if (result[key]) continue;

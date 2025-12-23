@@ -8,9 +8,9 @@ export default async function JobsPage() {
   const { data: jobs, error } = await supabase
     .from('jobs')
     .select(
-      'id, job_type, status, progress, error, meta, payload, created_at, updated_at'
+      'id, job_type, status, progress, error, meta, payload, created_at, updated_at, attempt_count, max_attempts'
     )
-    .order('created_at', { ascending: false });
+    .order('updated_at', { ascending: false });
 
   if (error) {
     return (

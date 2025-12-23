@@ -48,6 +48,8 @@ export type JobMinimal = {
   payload: JobRow['payload'];
   created_at: JobRow['created_at'];
   updated_at: JobRow['updated_at'];
+  attempt_count: JobRow['attempt_count'];
+  max_attempts: JobRow['max_attempts'];
 };
 
 export type ActionsResponse<T> =
