@@ -5,9 +5,16 @@ import { ADMIN_DOMAIN } from './lib/constants';
 
 export async function proxy(request: NextRequest) {
   const site = process.env.SITE || request.headers.get('host') || '';
+  console.log('Incoming request for site:', site);
 
   // Non-admin routes: just set x-site header, no session handling needed
   if (site !== ADMIN_DOMAIN) {
+    // Block access to /admin routes on non-admin sites
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/__not-found';
+      return NextResponse.rewrite(url);
+    }
     const response = NextResponse.next();
     response.headers.set('x-site', site);
     return response;
