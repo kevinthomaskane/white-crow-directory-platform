@@ -11,19 +11,18 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   const supabase = await createClient();
 
-  // TODO: Add domain column to sites table for lookup
-  // For now, using name as domain identifier
   const { data: site } = await supabase
     .from('sites')
     .select(`
       id,
       name,
+      domain,
       vertical_id,
       state_id,
       vertical:verticals(slug),
       state:states(code)
     `)
-    .eq('name', domain)
+    .eq('domain', domain.toLowerCase())
     .single();
 
   if (!site) return null;

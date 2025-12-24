@@ -486,6 +486,7 @@ export type Database = {
       sites: {
         Row: {
           created_at: string
+          domain: string
           id: string
           name: string
           state_id: string
@@ -494,6 +495,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          domain: string
           id?: string
           name: string
           state_id: string
@@ -502,6 +504,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          domain?: string
           id?: string
           name?: string
           state_id?: string

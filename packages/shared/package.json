@@ -23,10 +23,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
+    "typesense": "^2.1.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "tsup": "8.3.0"
+    "tsup": "8.3.0",
+    "typescript": "^5.9.3"
   }
 }

@@ -9,6 +9,7 @@ import type {
 
 type CreateSitePayload = {
   name: string;
+  domain: string;
   verticalId: string;
   stateId: string;
   categoryIds: string[];
@@ -24,12 +25,19 @@ type SiteCreated = {
 export async function createSite(
   payload: CreateSitePayload
 ): Promise<ActionsResponse<SiteCreated>> {
-  const { name, verticalId, stateId, categoryIds, cityIds } = payload;
+  const { name, domain, verticalId, stateId, categoryIds, cityIds } = payload;
 
   if (!name || name.trim() === '') {
     return {
       ok: false,
       error: 'Site name is required.',
+    };
+  }
+
+  if (!domain || domain.trim() === '') {
+    return {
+      ok: false,
+      error: 'Domain is required.',
     };
   }
 
@@ -80,6 +88,7 @@ export async function createSite(
     .from('sites')
     .insert({
       name: name.trim(),
+      domain: domain.trim().toLowerCase(),
       vertical_id: verticalId,
       state_id: stateId,
     })
@@ -90,7 +99,7 @@ export async function createSite(
     if (siteError.code === '23505') {
       return {
         ok: false,
-        error: 'A site with this name already exists.',
+        error: 'A site with this name or domain already exists.',
       };
     }
     console.error('Error creating site:', siteError);

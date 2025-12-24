@@ -1,4 +1,8 @@
-import { type AssociateSiteBusinessesJobMeta } from '@white-crow/shared';
+import {
+  type AssociateSiteBusinessesJobMeta,
+  type SyncBusinessesToSearchJobPayload,
+  type JobType,
+} from '@white-crow/shared';
 import { supabase } from '../lib/supabase/client';
 import type { AssociateSiteBusinessesJob } from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
@@ -154,4 +158,25 @@ export async function handleAssociateSiteBusinessesJob(
     `[Job ${job.id}] Completed associating ${associatedCount} businesses with site`
   );
   await markJobCompleted(job.id, meta);
+
+  // Queue sync to search job
+  if (associatedCount > 0) {
+    const syncPayload: SyncBusinessesToSearchJobPayload = { siteId };
+    const syncJobType: JobType = 'sync_businesses_to_search';
+
+    const { error: syncJobError } = await supabase.from('jobs').insert({
+      job_type: syncJobType,
+      payload: syncPayload,
+      status: 'pending',
+    });
+
+    if (syncJobError) {
+      console.error(
+        `[Job ${job.id}] Failed to queue sync_businesses_to_search job:`,
+        syncJobError
+      );
+    } else {
+      console.log(`[Job ${job.id}] Queued sync_businesses_to_search job for site`);
+    }
+  }
 }

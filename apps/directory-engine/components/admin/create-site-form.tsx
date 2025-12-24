@@ -39,8 +39,9 @@ type CreateSiteFormProps = {
 export function CreateSiteForm({ verticals, states }: CreateSiteFormProps) {
   const router = useRouter();
 
-  // site name
+  // site name and domain
   const [siteName, setSiteName] = useState('');
+  const [domain, setDomain] = useState('');
 
   // vertical -> categories
   const [verticalOpen, setVerticalOpen] = useState(false);
@@ -210,6 +211,7 @@ export function CreateSiteForm({ verticals, states }: CreateSiteFormProps) {
 
   const isFormValid =
     siteName.trim() !== '' &&
+    domain.trim() !== '' &&
     selectedVertical !== null &&
     selectedState !== null &&
     selectedCategoryIds.length > 0 &&
@@ -225,6 +227,7 @@ export function CreateSiteForm({ verticals, states }: CreateSiteFormProps) {
     try {
       const res = await createSite({
         name: siteName,
+        domain,
         verticalId: selectedVertical.id,
         stateId: selectedState.id,
         categoryIds: selectedCategoryIds,
@@ -264,16 +267,31 @@ export function CreateSiteForm({ verticals, states }: CreateSiteFormProps) {
       <div className="space-y-6">
         {/* Site Name */}
         <div className="space-y-2">
-          <Label htmlFor="site-name">Site Name (Domain)</Label>
+          <Label htmlFor="site-name">Site Name</Label>
           <Input
             id="site-name"
             type="text"
-            placeholder="e.g., chicagolawyers.com"
+            placeholder="e.g., Chicago Lawyers Directory"
             value={siteName}
             onChange={(e) => setSiteName(e.target.value)}
           />
           <p className="text-sm text-muted-foreground">
-            Enter the domain name for this directory site.
+            A display name for this directory site.
+          </p>
+        </div>
+
+        {/* Domain */}
+        <div className="space-y-2">
+          <Label htmlFor="domain">Domain</Label>
+          <Input
+            id="domain"
+            type="text"
+            placeholder="e.g., chicagolawyers.com"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">
+            The domain name used to access this directory site.
           </p>
         </div>
 

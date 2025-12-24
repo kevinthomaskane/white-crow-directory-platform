@@ -5,8 +5,12 @@ export {
   type GooglePlacesSearchJobMeta,
   type AssociateSiteBusinessesJobPayload,
   type AssociateSiteBusinessesJobMeta,
+  type SyncBusinessesToSearchJobPayload,
+  type SyncBusinessesToSearchJobMeta,
   type JobStatus,
   type JobType,
   GooglePlacesSearchJobPayloadSchema,
+  SyncBusinessesToSearchJobPayloadSchema,
 } from './jobs';
+export * from './typesense';
 export type ReviewSource = 'google_places';

@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Globe, Plus } from 'lucide-react';
 import ErrorDisplay from '@/components/admin/error-display';
@@ -10,13 +16,15 @@ export default async function SitesPage() {
 
   const { data: sites, error } = await supabase
     .from('sites')
-    .select(`
+    .select(
+      `
       id,
       name,
       created_at,
       verticals (name),
       states (name, code)
-    `)
+    `
+    )
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -49,7 +57,8 @@ export default async function SitesPage() {
           <div>
             <CardTitle>All Sites</CardTitle>
             <CardDescription>
-              {sites?.length || 0} site{sites?.length !== 1 ? 's' : ''} configured
+              {sites?.length || 0} site{sites?.length !== 1 ? 's' : ''}{' '}
+              configured
             </CardDescription>
           </div>
           <Globe className="h-5 w-5 text-muted-foreground" />
@@ -65,13 +74,12 @@ export default async function SitesPage() {
                   <div className="min-w-0">
                     <div className="font-medium">{site.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {site.verticals?.name} &middot; {site.states?.name} ({site.states?.code})
+                      {site.verticals?.name} &middot; {site.states?.name} (
+                      {site.states?.code})
                     </div>
                   </div>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/admin/sites/${site.id}/edit`}>
-                      Edit
-                    </Link>
+                    <Link href={`/admin/sites/${site.id}`}>Manage</Link>
                   </Button>
                 </li>
               ))}

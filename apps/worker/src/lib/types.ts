@@ -2,6 +2,7 @@ import {
   Database,
   GooglePlacesSearchJobPayload,
   AssociateSiteBusinessesJobPayload,
+  SyncBusinessesToSearchJobPayload,
 } from '@white-crow/shared';
 
 type Job = Database['public']['Tables']['jobs']['Row'];
@@ -23,4 +24,12 @@ export type AssociateSiteBusinessesJob = {
   attempt_count: Job['attempt_count'];
   run_id: Job['run_id'];
   payload: AssociateSiteBusinessesJobPayload;
+};
+
+export type SyncBusinessesToSearchJob = {
+  job_type: 'sync_businesses_to_search';
+  id: Job['id'];
+  attempt_count: Job['attempt_count'];
+  run_id: Job['run_id'];
+  payload: SyncBusinessesToSearchJobPayload;
 };

@@ -283,7 +283,8 @@ CREATE TABLE IF NOT EXISTS "public"."sites" (
     "name" "text" NOT NULL,
     "state_id" "uuid" NOT NULL,
     "vertical_id" "uuid" NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "domain" "text" NOT NULL
 );
 
 
@@ -382,6 +383,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 ALTER TABLE ONLY "public"."site_businesses"
+    ADD CONSTRAINT "site_businesses_business_site_unique" UNIQUE ("business_id", "site_id");
+
+
+
+ALTER TABLE ONLY "public"."site_businesses"
     ADD CONSTRAINT "site_businesses_pkey" PRIMARY KEY ("id");
 
 
@@ -393,6 +399,11 @@ ALTER TABLE ONLY "public"."site_categories"
 
 ALTER TABLE ONLY "public"."site_cities"
     ADD CONSTRAINT "site_cities_pkey" PRIMARY KEY ("site_id", "city_id");
+
+
+
+ALTER TABLE ONLY "public"."sites"
+    ADD CONSTRAINT "sites_domain_key" UNIQUE ("domain");
 
 
 

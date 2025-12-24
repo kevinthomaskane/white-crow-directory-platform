@@ -12,4 +12,5 @@ export default defineConfig({
   platform: 'node',
   splitting: false,
   treeshake: true,
+  external: ['typesense'],
 });

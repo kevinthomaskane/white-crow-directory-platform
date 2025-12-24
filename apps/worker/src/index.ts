@@ -1,9 +1,14 @@
 import 'dotenv/config';
 import { handleGooglePlacesSearchJob } from './processors/google-places-search-job';
 import { handleAssociateSiteBusinessesJob } from './processors/associate-site-businesses-job';
+import { handleSyncBusinessesToSearchJob } from './processors/sync-businesses-to-search-job';
 import { markJobFailed } from './lib/update-job-status';
 import { supabase } from './lib/supabase/client';
-import { GooglePlacesSearchJob, AssociateSiteBusinessesJob } from './lib/types';
+import {
+  GooglePlacesSearchJob,
+  AssociateSiteBusinessesJob,
+  SyncBusinessesToSearchJob,
+} from './lib/types';
 
 const WORKER_ID = process.env.WORKER_ID;
 const STALE_JOB_TIMEOUT_MINUTES = 5;
@@ -101,6 +106,19 @@ while (true) {
     case 'associate_site_businesses':
       try {
         await handleAssociateSiteBusinessesJob(job as AssociateSiteBusinessesJob);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`[Job ${job.id}] Failed:`, errorMessage);
+        try {
+          await markJobFailed(job.id, errorMessage);
+        } catch (markFailedErr) {
+          console.error(`[Job ${job.id}] Failed to mark job as failed:`, markFailedErr);
+        }
+      }
+      break;
+    case 'sync_businesses_to_search':
+      try {
+        await handleSyncBusinessesToSearchJob(job as SyncBusinessesToSearchJob);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error(`[Job ${job.id}] Failed:`, errorMessage);
