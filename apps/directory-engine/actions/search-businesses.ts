@@ -8,7 +8,7 @@ import {
 import { getSiteConfig } from '@/lib/routing';
 
 export type SearchResult = {
-  id: string;
+  business_id: string;
   name: string;
   description?: string;
   city?: string;
@@ -69,13 +69,15 @@ export async function searchBusinesses(
         filter_by: filterBy,
         per_page: perPage,
         page,
-        sort_by: query ? '_text_match:desc,review_count:desc' : 'review_count:desc',
+        sort_by: query
+          ? '_text_match:desc,review_count:desc'
+          : 'review_count:desc',
       });
 
     const results: SearchResult[] = (searchResult.hits || []).map((hit) => {
       const doc = hit.document;
       return {
-        id: doc.id,
+        business_id: doc.business_id,
         name: doc.name,
         description: doc.description,
         city: doc.city,

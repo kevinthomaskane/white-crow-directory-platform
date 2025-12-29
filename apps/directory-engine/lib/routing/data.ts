@@ -1,7 +1,8 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import type { SiteConfig, RouteContext } from './types';
+import { slugify } from '@/lib/utils';
+import type { SiteConfig, RouteContext, CategoryData, CityData } from './types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
   const headersList = await headers();
@@ -13,7 +14,8 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   const { data: site } = await supabase
     .from('sites')
-    .select(`
+    .select(
+      `
       id,
       name,
       domain,
@@ -21,7 +23,8 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
       state_id,
       vertical:verticals(slug),
       state:states(code)
-    `)
+    `
+    )
     .eq('domain', domain.toLowerCase())
     .single();
 
@@ -37,55 +40,43 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
   };
 });
 
-export const getRouteContext = cache(async (site: SiteConfig): Promise<RouteContext> => {
-  const supabase = await createClient();
+export const getRouteContext = cache(
+  async (site: SiteConfig): Promise<RouteContext> => {
+    const supabase = await createClient();
 
-  // Get categories for this site's vertical
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('slug')
-    .eq('vertical_id', site.verticalId);
+    // Get categories enabled for this site
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug, name)')
+      .eq('site_id', site.id);
 
-  // Get all state codes
-  const { data: states } = await supabase
-    .from('states')
-    .select('code');
+    // Get cities enabled for this site
+    const { data: siteCities } = await supabase
+      .from('site_cities')
+      .select('city:cities(name)')
+      .eq('site_id', site.id);
 
-  const categorySet = new Set(categories?.map((c) => c.slug) || []);
-  const stateSet = new Set(states?.map((s) => s.code.toLowerCase()) || []);
+    // Build category list and set
+    const categoryList: CategoryData[] = (siteCategories || [])
+      .map((sc) => {
+        const cat = sc.category as { slug: string; name: string } | null;
+        return cat ? { slug: cat.slug, name: cat.name } : null;
+      })
+      .filter((c): c is CategoryData => c !== null);
 
-  // City lookup function with caching
-  const cityCache = new Map<string, Set<string>>();
+    // Build city list and set (slugify city names)
+    const cityList: CityData[] = (siteCities || [])
+      .map((sc) => {
+        const city = sc.city as { name: string } | null;
+        return city ? { slug: slugify(city.name), name: city.name } : null;
+      })
+      .filter((c): c is CityData => c !== null);
 
-  const getCitySlugs = async (stateCode: string): Promise<Set<string>> => {
-    const cached = cityCache.get(stateCode);
-    if (cached) return cached;
-
-    const { data: state } = await supabase
-      .from('states')
-      .select('id')
-      .eq('code', stateCode.toUpperCase())
-      .single();
-
-    if (!state) {
-      const empty = new Set<string>();
-      cityCache.set(stateCode, empty);
-      return empty;
-    }
-
-    const { data: cities } = await supabase
-      .from('cities')
-      .select('slug')
-      .eq('state_id', state.id);
-
-    const citySet = new Set(cities?.map((c) => c.slug) || []);
-    cityCache.set(stateCode, citySet);
-    return citySet;
-  };
-
-  return {
-    categories: categorySet,
-    stateCodes: stateSet,
-    getCitySlugs,
-  };
-});
+    return {
+      categoryList,
+      cityList,
+      categories: new Set(categoryList.map((c) => c.slug)),
+      cities: new Set(cityList.map((c) => c.slug)),
+    };
+  }
+);

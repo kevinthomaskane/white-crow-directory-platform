@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, Loader2 } from 'lucide-react';
-import { searchBusinesses, type SearchResult } from '@/actions/search-businesses';
+import {
+  searchBusinesses,
+  type SearchResult,
+} from '@/actions/search-businesses';
 import { cn } from '@/lib/utils';
 
 type SearchBoxProps = {
@@ -101,11 +104,15 @@ export function SearchBox({
   };
 
   const navigateToResult = (result: SearchResult) => {
-    const category = result.category_names[0]?.toLowerCase().replace(/\s+/g, '-') || 'business';
+    const category =
+      result.category_names[0]?.toLowerCase().replace(/\s+/g, '-') ||
+      'business';
     const city = result.city?.toLowerCase().replace(/\s+/g, '-') || '';
     const state = result.state?.toLowerCase() || '';
 
-    router.push(`/${basePath}/${category}/${city}/${state}/${result.id}`);
+    router.push(
+      `/${basePath}/${category}/${city}/${state}/${result.business_id}`
+    );
     setIsOpen(false);
     setQuery('');
   };
@@ -159,7 +166,7 @@ export function SearchBox({
           {results.length > 0 ? (
             <ul className="max-h-80 overflow-auto py-1">
               {results.map((result, index) => (
-                <li key={result.id}>
+                <li key={result.business_id}>
                   <button
                     type="button"
                     onClick={() => navigateToResult(result)}

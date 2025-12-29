@@ -4,7 +4,6 @@ interface DirectoryBusinessPageProps {
   site: SiteConfig;
   category: string;
   city: string;
-  state: string;
   businessId: string;
 }
 
@@ -12,7 +11,6 @@ export function DirectoryBusinessPage({
   site,
   category,
   city,
-  state,
   businessId,
 }: DirectoryBusinessPageProps) {
   return (
@@ -20,7 +18,7 @@ export function DirectoryBusinessPage({
       <div>
         <p className="text-sm text-muted-foreground capitalize">
           {site.basePath.replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')} &rsaquo;{' '}
-          {city.replace(/-/g, ' ')}, {state.toUpperCase()}
+          {city.replace(/-/g, ' ')}, {site.stateCode}
         </p>
         <h1 className="text-3xl font-bold tracking-tight">
           {/* TODO: Fetch business name */}

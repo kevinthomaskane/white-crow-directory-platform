@@ -6,10 +6,8 @@ import {
   HomePage,
   DirectoryBasePage,
   DirectoryCategoryPage,
-  DirectoryCategoryStatePage,
   DirectoryCategoryCityPage,
   DirectoryBusinessPage,
-  DirectoryStatePage,
   DirectoryCityPage,
   ContentCategoryPage,
   ContentArticlePage,
@@ -26,7 +24,7 @@ export default async function CatchAllPage({ params }: PageProps) {
   if (!site) return notFound();
 
   const ctx = await getRouteContext(site);
-  const route = await parseRoute(site, slug, ctx);
+  const route = parseRoute(site, slug, ctx);
 
   if (!route) return notFound();
 
@@ -40,22 +38,12 @@ export default async function CatchAllPage({ params }: PageProps) {
     case 'directory-category':
       return <DirectoryCategoryPage site={site} category={route.category} />;
 
-    case 'directory-category-state':
-      return (
-        <DirectoryCategoryStatePage
-          site={site}
-          category={route.category}
-          state={route.state}
-        />
-      );
-
     case 'directory-category-city':
       return (
         <DirectoryCategoryCityPage
           site={site}
           category={route.category}
           city={route.city}
-          state={route.state}
         />
       );
 
@@ -65,16 +53,12 @@ export default async function CatchAllPage({ params }: PageProps) {
           site={site}
           category={route.category}
           city={route.city}
-          state={route.state}
           businessId={route.businessId}
         />
       );
 
-    case 'directory-state':
-      return <DirectoryStatePage site={site} state={route.state} />;
-
     case 'directory-city':
-      return <DirectoryCityPage site={site} city={route.city} state={route.state} />;
+      return <DirectoryCityPage site={site} city={route.city} />;
 
     case 'content-category':
       return <ContentCategoryPage site={site} category={route.category} />;

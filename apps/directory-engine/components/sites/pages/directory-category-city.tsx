@@ -4,26 +4,24 @@ interface DirectoryCategoryCityPageProps {
   site: SiteConfig;
   category: string;
   city: string;
-  state: string;
 }
 
 export function DirectoryCategoryCityPage({
   site,
   category,
   city,
-  state,
 }: DirectoryCategoryCityPageProps) {
   return (
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground capitalize">
-          {site.basePath.replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')} &rsaquo; {state.toUpperCase()}
+          {site.basePath.replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')} &rsaquo; {site.stateCode}
         </p>
         <h1 className="text-3xl font-bold tracking-tight capitalize">
-          {category.replace(/-/g, ' ')} in {city.replace(/-/g, ' ')}, {state.toUpperCase()}
+          {category.replace(/-/g, ' ')} in {city.replace(/-/g, ' ')}, {site.stateCode}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Browse {category.replace(/-/g, ' ')} listings in {city.replace(/-/g, ' ')}, {state.toUpperCase()}.
+          Browse {category.replace(/-/g, ' ')} listings in {city.replace(/-/g, ' ')}, {site.stateCode}.
         </p>
       </div>
 
