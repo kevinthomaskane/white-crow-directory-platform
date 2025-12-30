@@ -1,13 +1,15 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig, RouteContext } from '@/lib/routing';
+import { SearchForm } from '@/components/sites/search-form';
 
 interface HomePageProps {
   site: SiteConfig;
+  ctx: RouteContext;
 }
 
-export function HomePage({ site }: HomePageProps) {
+export function HomePage({ site, ctx }: HomePageProps) {
   return (
     <div className="space-y-8">
-      <div>
+      <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">
           Welcome to {site.name}
         </h1>
@@ -15,6 +17,13 @@ export function HomePage({ site }: HomePageProps) {
           Browse our directory of listings.
         </p>
       </div>
+
+      <SearchForm
+        basePath={site.basePath}
+        categories={ctx.categoryList}
+        cities={ctx.cityList}
+        className="mx-auto max-w-2xl"
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <PlaceholderCard title="Find by Category" />

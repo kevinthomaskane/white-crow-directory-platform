@@ -30,7 +30,7 @@ export default async function CatchAllPage({ params }: PageProps) {
 
   switch (route.type) {
     case 'home':
-      return <HomePage site={site} />;
+      return <HomePage site={site} ctx={ctx} />;
 
     case 'directory-base':
       return <DirectoryBasePage site={site} />;

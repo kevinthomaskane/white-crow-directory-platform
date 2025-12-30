@@ -2,7 +2,7 @@ import Typesense from 'typesense';
 
 export function createTypesenseClient({
   host = 'localhost',
-  port = 10,
+  port = 8108,
   protocol = 'http',
   apiKey,
 }: {

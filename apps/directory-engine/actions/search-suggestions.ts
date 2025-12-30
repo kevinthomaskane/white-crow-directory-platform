@@ -26,7 +26,12 @@ export async function getBusinessSuggestions(
     return [];
   }
 
-  const typesense = createTypesenseClient();
+  const typesense = createTypesenseClient({
+    apiKey: process.env.TYPESENSE_API_KEY!,
+    host: process.env.TYPESENSE_HOST!,
+    port: 8108,
+    protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
+  });
 
   try {
     const result = await typesense
@@ -39,6 +44,7 @@ export async function getBusinessSuggestions(
         per_page: 5,
       });
 
+    console.log(JSON.stringify(result, null, 2));
     return (result.hits || []).map((hit) => ({
       id: hit.document.business_id,
       name: hit.document.name,

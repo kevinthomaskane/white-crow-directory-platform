@@ -44,7 +44,12 @@ export async function searchBusinesses(
     return { results: [], found: 0, page: 1, totalPages: 0 };
   }
 
-  const typesense = createTypesenseClient();
+  const typesense = createTypesenseClient({
+    apiKey: process.env.TYPESENSE_API_KEY!,
+    host: process.env.TYPESENSE_HOST!,
+    port: 8108,
+    protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
+  });
 
   // Build filter string
   const filters: string[] = [`site_ids:=${site.id}`];

@@ -11,7 +11,11 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import {
   getBusinessSuggestions,
@@ -51,9 +55,9 @@ export function SearchForm({
 
   // Filter categories client-side
   const filteredCategories = showCategorySuggestions
-    ? categories.filter((c) =>
-        c.name.toLowerCase().includes(whatQuery.toLowerCase())
-      ).slice(0, 5)
+    ? categories
+        .filter((c) => c.name.toLowerCase().includes(whatQuery.toLowerCase()))
+        .slice(0, 5)
     : [];
 
   // Filter cities client-side
@@ -88,6 +92,36 @@ export function SearchForm({
     return () => clearTimeout(timer);
   }, [whatQuery, fetchBusinessSuggestions]);
 
+  // Build directory URL based on site configuration
+  // Single-city sites omit city, single-category sites omit category
+  const buildDirectoryUrl = (
+    categorySlug?: string | null,
+    citySlug?: string | null,
+    businessId?: string | null
+  ) => {
+    const singleCity = cities.length === 1;
+    const singleCategory = categories.length === 1;
+
+    const parts = [basePath];
+
+    // Add category if provided and not single-category site
+    if (categorySlug && !singleCategory) {
+      parts.push(categorySlug);
+    }
+
+    // Add city if provided and not single-city site
+    if (citySlug && !singleCity) {
+      parts.push(citySlug);
+    }
+
+    // Add business ID if provided
+    if (businessId) {
+      parts.push(businessId);
+    }
+
+    return '/' + parts.join('/');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,12 +132,8 @@ export function SearchForm({
       (c) => c.name.toLowerCase() === whereQuery.toLowerCase()
     )?.slug;
 
-    if (categorySlug && citySlug) {
-      router.push(`/${basePath}/${categorySlug}/${citySlug}`);
-    } else if (categorySlug) {
-      router.push(`/${basePath}/${categorySlug}`);
-    } else if (citySlug) {
-      router.push(`/${basePath}/${citySlug}`);
+    if (categorySlug || citySlug) {
+      router.push(buildDirectoryUrl(categorySlug, citySlug));
     } else if (whatQuery.trim()) {
       // Free-text search
       const params = new URLSearchParams({ q: whatQuery });
@@ -123,9 +153,9 @@ export function SearchForm({
     setWhatQuery(category.name);
     setWhatOpen(false);
 
-    // If only one city, navigate directly
+    // If only one city, navigate directly to results
     if (cities.length === 1) {
-      router.push(`/${basePath}/${category.slug}/${cities[0].slug}`);
+      router.push(buildDirectoryUrl(category.slug));
     }
   };
 
@@ -134,7 +164,7 @@ export function SearchForm({
     const categorySlug =
       business.categorySlug || categories[0]?.slug || 'business';
 
-    router.push(`/${basePath}/${categorySlug}/${citySlug}/${business.id}`);
+    router.push(buildDirectoryUrl(categorySlug, citySlug, business.id));
     setWhatOpen(false);
   };
 
@@ -150,7 +180,7 @@ export function SearchForm({
     <form onSubmit={handleSubmit} className={cn('flex gap-2', className)}>
       {/* What search */}
       <Popover open={whatOpen} onOpenChange={setWhatOpen}>
-        <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -160,6 +190,14 @@ export function SearchForm({
                 setWhatOpen(true);
               }}
               onFocus={() => setWhatOpen(true)}
+              onBlur={(e) => {
+                // Delay close to allow clicking on popover items
+                if (
+                  !e.relatedTarget?.closest('[data-slot="popover-content"]')
+                ) {
+                  setTimeout(() => setWhatOpen(false), 150);
+                }
+              }}
               placeholder={
                 showCategorySuggestions
                   ? 'Category or business name...'
@@ -171,10 +209,10 @@ export function SearchForm({
               <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
             )}
           </div>
-        </PopoverTrigger>
+        </PopoverAnchor>
         {whatQuery.trim() && hasWhatSuggestions && (
           <PopoverContent
-            className="w-[--radix-popover-trigger-width] p-0"
+            className="w-[--radix-popover-anchor-width] p-0"
             align="start"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
@@ -226,7 +264,7 @@ export function SearchForm({
       {/* Where search - only show if multiple cities */}
       {showLocationSearch && (
         <Popover open={whereOpen} onOpenChange={setWhereOpen}>
-          <PopoverTrigger asChild>
+          <PopoverAnchor asChild>
             <div className="relative flex-1">
               <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -236,14 +274,21 @@ export function SearchForm({
                   setWhereOpen(true);
                 }}
                 onFocus={() => setWhereOpen(true)}
+                onBlur={(e) => {
+                  if (
+                    !e.relatedTarget?.closest('[data-slot="popover-content"]')
+                  ) {
+                    setTimeout(() => setWhereOpen(false), 150);
+                  }
+                }}
                 placeholder="City..."
                 className="pl-10"
               />
             </div>
-          </PopoverTrigger>
+          </PopoverAnchor>
           {filteredCities.length > 0 && (
             <PopoverContent
-              className="w-[--radix-popover-trigger-width] p-0"
+              className="w-[--radix-popover-anchor-width] p-0"
               align="start"
               onOpenAutoFocus={(e) => e.preventDefault()}
             >

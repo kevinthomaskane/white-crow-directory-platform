@@ -160,8 +160,8 @@ export async function handleSyncBusinessesToSearchJob(
         const categories = categoryMap.get(biz.id) || { ids: [], names: [] };
         const siteIds = siteIdsMap.get(biz.id) || [];
 
-        // id field cannot exist in the document as Typesense uses it internally
-        const doc: BusinessDocument = {
+        const doc: BusinessDocument & { id: string } = {
+          id: biz.id.replace(/-/g, ''), // Sanitized for Typesense deduplication
           business_id: biz.id,
           name: biz.name,
           description: biz.description || biz.editorial_summary || undefined,
@@ -182,7 +182,7 @@ export async function handleSyncBusinessesToSearchJob(
 
         return doc;
       })
-      .filter((doc): doc is BusinessDocument => doc !== null);
+      .filter((doc): doc is BusinessDocument & { id: string } => doc !== null);
 
     if (documents.length === 0) continue;
 

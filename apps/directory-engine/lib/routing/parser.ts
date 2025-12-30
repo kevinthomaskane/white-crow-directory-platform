@@ -30,50 +30,90 @@ function parseDirectoryRoute(
   ctx: RouteContext
 ): ParsedRoute | null {
   const basePath = site.basePath;
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
 
   // /[base_path]
   if (segments.length === 0) {
     return { type: 'directory-base', basePath };
   }
 
-  const [first, second, third] = segments;
+  // Parse segments to extract category, city, businessId
+  let category: string | null = null;
+  let city: string | null = null;
+  let businessId: string | null = null;
 
-  // 1 segment: category OR city
-  if (segments.length === 1) {
-    if (ctx.categories.has(first)) {
-      return { type: 'directory-category', basePath, category: first };
+  const [first, second, third, fourth] = segments;
+
+  // First segment: must be category or city
+  const firstIsCategory = ctx.categories.has(first);
+  const firstIsCity = ctx.cities.has(first);
+
+  if (firstIsCategory) {
+    category = first;
+  } else if (firstIsCity) {
+    city = first;
+  } else {
+    return null; // Invalid first segment
+  }
+
+  // Second segment (if exists)
+  if (second !== undefined) {
+    const secondIsCategory = ctx.categories.has(second);
+    const secondIsCity = ctx.cities.has(second);
+
+    if (category && secondIsCity) {
+      city = second;
+    } else if (city && secondIsCategory) {
+      category = second;
+    } else if (category && singleCity) {
+      // Single-city site: second segment is business ID
+      businessId = second;
+    } else if (city && singleCategory) {
+      // Single-category site: second segment is business ID
+      businessId = second;
+    } else {
+      return null; // Invalid second segment
     }
-    if (ctx.cities.has(first)) {
-      return { type: 'directory-city', basePath, city: first };
+  }
+
+  // Third segment (if exists)
+  if (third !== undefined) {
+    if (businessId) {
+      return null; // Already have business ID, too many segments
     }
+    businessId = third;
+  }
+
+  // Fourth segment - too many
+  if (fourth !== undefined) {
     return null;
   }
 
-  // 2 segments: category + city
-  if (segments.length === 2) {
-    if (ctx.categories.has(first) && ctx.cities.has(second)) {
-      return {
-        type: 'directory-category-city',
-        basePath,
-        category: first,
-        city: second,
-      };
-    }
-    return null;
+  // Apply single-city/single-category inference for missing values
+  if (singleCity && !city) {
+    city = ctx.cityList[0].slug;
+  }
+  if (singleCategory && !category) {
+    category = ctx.categoryList[0].slug;
   }
 
-  // 3 segments: category + city + business_id
-  if (segments.length === 3) {
-    if (ctx.categories.has(first) && ctx.cities.has(second)) {
-      return {
-        type: 'directory-business',
-        basePath,
-        category: first,
-        city: second,
-        businessId: third,
-      };
-    }
-    return null;
+  // Determine route type
+  if (businessId) {
+    if (!category || !city) return null;
+    return { type: 'directory-business', basePath, category, city, businessId };
+  }
+
+  if (category && city) {
+    return { type: 'directory-category-city', basePath, category, city };
+  }
+
+  if (category) {
+    return { type: 'directory-category', basePath, category };
+  }
+
+  if (city) {
+    return { type: 'directory-city', basePath, city };
   }
 
   return null;
