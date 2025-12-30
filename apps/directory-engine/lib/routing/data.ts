@@ -21,7 +21,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
       domain,
       vertical_id,
       state_id,
-      vertical:verticals(slug),
+      vertical:verticals(slug, term_category, term_categories, term_business, term_businesses, term_cta),
       state:states(code)
     `
     )
@@ -30,13 +30,29 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   if (!site) return null;
 
+  const vertical = site.vertical as {
+    slug: string;
+    term_category: string | null;
+    term_categories: string | null;
+    term_business: string | null;
+    term_businesses: string | null;
+    term_cta: string | null;
+  } | null;
+
   return {
     id: site.id,
     name: site.name,
-    basePath: (site.vertical as { slug: string })?.slug || '',
+    basePath: vertical?.slug || '',
     verticalId: site.vertical_id,
     stateId: site.state_id,
     stateCode: (site.state as { code: string })?.code || '',
+    terminology: {
+      term_category: vertical?.term_category ?? null,
+      term_categories: vertical?.term_categories ?? null,
+      term_business: vertical?.term_business ?? null,
+      term_businesses: vertical?.term_businesses ?? null,
+      term_cta: vertical?.term_cta ?? null,
+    },
   };
 });
 

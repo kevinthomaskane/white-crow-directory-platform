@@ -7,6 +7,29 @@ type City = Database['public']['Tables']['cities']['Row'];
 type JobRow = Database['public']['Tables']['jobs']['Row'];
 type JobInsert = Database['public']['Tables']['jobs']['Insert'];
 
+export type EditVertical = Pick<
+  Vertical,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'term_category'
+  | 'term_categories'
+  | 'term_business'
+  | 'term_businesses'
+  | 'term_cta'
+  | 'logo_url'
+  | 'default_hero_url'
+>;
+
+export type VerticalTerminology = Pick<
+  Vertical,
+  | 'term_category'
+  | 'term_categories'
+  | 'term_business'
+  | 'term_businesses'
+  | 'term_cta'
+>;
+
 export type VerticalMinimal = {
   id: Vertical['id'];
   name: Vertical['name'];

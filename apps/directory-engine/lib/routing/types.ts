@@ -1,3 +1,5 @@
+import type { VerticalTerminology } from '@/lib/types';
+
 export type RouteType =
   | 'home'
   | 'directory-base'
@@ -36,6 +38,7 @@ export interface SiteConfig {
   verticalId: string;
   stateId: string;
   stateCode: string;
+  terminology: VerticalTerminology;
 }
 
 export type CategoryData = { slug: string; name: string };

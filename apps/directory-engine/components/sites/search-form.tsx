@@ -177,7 +177,10 @@ export function SearchForm({
     filteredCategories.length > 0 || businessSuggestions.length > 0;
 
   return (
-    <form onSubmit={handleSubmit} className={cn('flex gap-2', className)}>
+    <form
+      onSubmit={handleSubmit}
+      className={cn('flex gap-2 items-center', className)}
+    >
       {/* What search */}
       <Popover open={whatOpen} onOpenChange={setWhatOpen}>
         <PopoverAnchor asChild>

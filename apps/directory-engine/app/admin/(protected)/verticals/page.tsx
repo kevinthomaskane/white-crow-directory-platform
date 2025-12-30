@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AddVerticalForm } from '@/components/admin/add-vertical-form';
 import ErrorDisplay from '@/components/admin/error-display';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Layers } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Layers, Pencil } from 'lucide-react';
 
 export default async function VerticalsPage() {
   const supabase = await createClient();
@@ -64,6 +66,11 @@ export default async function VerticalsPage() {
                       <div className="font-medium">{v.name}</div>
                       <div className="text-sm text-muted-foreground">{v.slug}</div>
                     </div>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href={`/admin/verticals/${v.id}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </li>
                 ))}
               </ul>

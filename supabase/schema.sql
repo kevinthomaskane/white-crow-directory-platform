@@ -310,7 +310,14 @@ CREATE TABLE IF NOT EXISTS "public"."verticals" (
     "name" "text" NOT NULL,
     "slug" "text" NOT NULL,
     "description" "text",
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "term_category" "text" DEFAULT 'Category'::"text",
+    "term_categories" "text" DEFAULT 'Categories'::"text",
+    "term_business" "text" DEFAULT 'Business'::"text",
+    "term_businesses" "text" DEFAULT 'Businesses'::"text",
+    "term_cta" "text" DEFAULT 'Find'::"text",
+    "logo_url" "text",
+    "default_hero_url" "text"
 );
 
 

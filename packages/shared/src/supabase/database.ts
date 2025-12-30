@@ -549,24 +549,45 @@ export type Database = {
       verticals: {
         Row: {
           created_at: string
+          default_hero_url: string | null
           description: string | null
           id: string
+          logo_url: string | null
           name: string
           slug: string
+          term_business: string | null
+          term_businesses: string | null
+          term_categories: string | null
+          term_category: string | null
+          term_cta: string | null
         }
         Insert: {
           created_at?: string
+          default_hero_url?: string | null
           description?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           slug: string
+          term_business?: string | null
+          term_businesses?: string | null
+          term_categories?: string | null
+          term_category?: string | null
+          term_cta?: string | null
         }
         Update: {
           created_at?: string
+          default_hero_url?: string | null
           description?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           slug?: string
+          term_business?: string | null
+          term_businesses?: string | null
+          term_categories?: string | null
+          term_category?: string | null
+          term_cta?: string | null
         }
         Relationships: []
       }
