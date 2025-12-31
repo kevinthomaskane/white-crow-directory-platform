@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { EditVerticalForm } from '@/components/admin/edit-vertical-form';
+import { VerticalAssetsForm } from '@/components/admin/vertical-assets-form';
 
 interface VerticalEditPageProps {
   params: Promise<{ id: string }>;
@@ -82,9 +83,11 @@ export default async function VerticalEditPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Asset uploads coming soon.
-            </p>
+            <VerticalAssetsForm
+              verticalId={vertical.id}
+              verticalSlug={vertical.slug}
+              currentHeroUrl={vertical.default_hero_url}
+            />
           </CardContent>
         </Card>
       </div>

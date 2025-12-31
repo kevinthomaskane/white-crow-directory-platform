@@ -1,29 +1,20 @@
 import type { SiteConfig, RouteContext } from '@/lib/routing';
-import { SearchForm } from '@/components/sites/search-form';
+import { Hero } from '@/components/sites/hero';
 
 interface HomePageProps {
   site: SiteConfig;
   ctx: RouteContext;
+  stats?: {
+    businessCount?: number;
+    categoryCount?: number;
+    cityCount?: number;
+  };
 }
 
-export function HomePage({ site, ctx }: HomePageProps) {
+export function HomePage({ site, ctx, stats }: HomePageProps) {
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome to {site.name}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Browse our directory of listings.
-        </p>
-      </div>
-
-      <SearchForm
-        basePath={site.basePath}
-        categories={ctx.categoryList}
-        cities={ctx.cityList}
-        className="mx-auto max-w-2xl"
-      />
+    <div className="space-y-12">
+      <Hero site={site} ctx={ctx} stats={stats} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <PlaceholderCard title="Find by Category" />

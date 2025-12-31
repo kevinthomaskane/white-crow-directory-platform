@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Directory Engine
 
-## Getting Started
+Next.js frontend for the White Crow Directory Platform.
 
-First, run the development server:
+## Vertical Assets
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Verticals can have default assets (hero image, logo, favicon) that are used across all sites in that vertical. Assets are stored in Supabase Storage with unique filenames and their URLs are persisted in the database.
+
+### Storage Structure
+
+Each vertical has its own public bucket in Supabase Storage named after the vertical slug (e.g., `lawyers`). Assets are uploaded with unique timestamped filenames:
+
+```
+{vertical-slug}/
+  hero-1704067200000
+  logo-1704067200000
+  favicon-1704067200000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Database Fields
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The `verticals` table stores the public URLs for each asset:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Field | Description |
+|-------|-------------|
+| `default_hero_url` | Hero image URL for the vertical |
+| `logo_url` | Logo URL (TODO) |
+| `favicon_url` | Favicon URL (TODO) |
 
-## Learn More
+### Upload Flow
 
-To learn more about Next.js, take a look at the following resources:
+1. Admin selects a file in the vertical edit page
+2. `getVerticalAssetUploadUrl()` creates the bucket (if needed) and returns a signed upload URL
+3. Frontend uploads directly to Supabase Storage via PUT request
+4. `saveVerticalHeroUrl()` (or equivalent) saves the public URL to the database
+5. Sites read the URL from the database via `SiteConfig`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Adding a New Asset Type
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To add a new vertical asset (e.g., `logo`):
 
-## Deploy on Vercel
+1. **Add the asset type** to `lib/types.ts`:
+   ```ts
+   export type VerticalAssetType = 'hero' | 'logo' | 'favicon';
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Add database field** to `verticals` table (if not exists):
+   ```sql
+   ALTER TABLE verticals ADD COLUMN logo_url TEXT;
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Create a save action** in `actions/upload-vertical-asset.ts`:
+   ```ts
+   export async function saveVerticalLogoUrl(
+     verticalId: string,
+     logoUrl: string
+   ): Promise<ActionsResponse<null>> {
+     // Same pattern as saveVerticalHeroUrl
+   }
+   ```
+
+4. **Add to SiteConfig** in `lib/routing/types.ts`:
+   ```ts
+   export interface SiteConfig {
+     // ...existing fields
+     logoUrl: string | null;
+   }
+   ```
+
+5. **Update the query** in `lib/routing/data.ts` to fetch the new field
+
+6. **Add upload UI** in `components/admin/vertical-assets-form.tsx` using the existing `AssetUpload` component pattern
+
+### Why Unique Filenames?
+
+Using timestamped filenames (e.g., `hero-1704067200000`) instead of fixed names (e.g., `hero.jpg`):
+
+- **No cache invalidation needed** - new upload = new URL = no stale cache
+- **Rollback capability** - old files remain in storage
+- **CDN-friendly** - immutable URLs cache indefinitely

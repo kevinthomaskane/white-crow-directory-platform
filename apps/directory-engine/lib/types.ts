@@ -30,50 +30,36 @@ export type VerticalTerminology = Pick<
   | 'term_cta'
 >;
 
-export type VerticalMinimal = {
-  id: Vertical['id'];
-  name: Vertical['name'];
-  slug: Vertical['slug'];
-};
+export type VerticalMinimal = Pick<Vertical, 'id' | 'name' | 'slug'>;
 
-export type StateMinimal = {
-  id: State['id'];
-  name: State['name'];
-  code: State['code'];
-};
+export type StateMinimal = Pick<State, 'id' | 'name' | 'code'>;
 
-export type CategoryMinimal = {
-  id: Category['id'];
-  name: Category['name'];
-  slug: Category['slug'];
-  vertical_id: Category['vertical_id'];
-};
+export type CategoryMinimal = Pick<
+  Category,
+  'id' | 'name' | 'slug' | 'vertical_id'
+>;
 
-export type CityMinimal = {
-  id: City['id'];
-  name: City['name'];
-  state_id: City['state_id'];
-  population: City['population'] | null;
-};
+export type CityMinimal = Pick<City, 'id' | 'name' | 'state_id' | 'population'>;
 
 export type JobInsertMinimal = JobInsert & {
   job_type: JobType;
   status: JobStatus;
 };
 
-export type JobMinimal = {
-  id: JobRow['id'];
-  job_type: JobRow['job_type'];
-  status: JobRow['status'];
-  progress: JobRow['progress'];
-  error: JobRow['error'];
-  meta: JobRow['meta'];
-  payload: JobRow['payload'];
-  created_at: JobRow['created_at'];
-  updated_at: JobRow['updated_at'];
-  attempt_count: JobRow['attempt_count'];
-  max_attempts: JobRow['max_attempts'];
-};
+export type JobMinimal = Pick<
+  JobRow,
+  | 'id'
+  | 'job_type'
+  | 'status'
+  | 'progress'
+  | 'error'
+  | 'meta'
+  | 'payload'
+  | 'created_at'
+  | 'updated_at'
+  | 'attempt_count'
+  | 'max_attempts'
+>;
 
 export type ActionsResponse<T> =
   | {
@@ -84,3 +70,5 @@ export type ActionsResponse<T> =
       ok: true;
       data: T;
     };
+
+export type VerticalAssetType = 'hero' | 'logo' | 'favicon';

@@ -39,6 +39,7 @@ export interface SiteConfig {
   stateId: string;
   stateCode: string;
   terminology: VerticalTerminology;
+  defaultHeroUrl: string | null;
 }
 
 export type CategoryData = { slug: string; name: string };

@@ -1,5 +1,10 @@
 import { notFound } from 'next/navigation';
-import { parseRoute, getSiteConfig, getRouteContext } from '@/lib/routing';
+import {
+  parseRoute,
+  getSiteConfig,
+  getRouteContext,
+  getSiteStats,
+} from '@/lib/routing';
 
 // Page components
 import {
@@ -29,8 +34,10 @@ export default async function CatchAllPage({ params }: PageProps) {
   if (!route) return notFound();
 
   switch (route.type) {
-    case 'home':
-      return <HomePage site={site} ctx={ctx} />;
+    case 'home': {
+      const stats = await getSiteStats(site, ctx);
+      return <HomePage site={site} ctx={ctx} stats={stats} />;
+    }
 
     case 'directory-base':
       return <DirectoryBasePage site={site} />;

@@ -21,7 +21,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
       domain,
       vertical_id,
       state_id,
-      vertical:verticals(slug, term_category, term_categories, term_business, term_businesses, term_cta),
+      vertical:verticals(slug, term_category, term_categories, term_business, term_businesses, term_cta, default_hero_url),
       state:states(code)
     `
     )
@@ -30,15 +30,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   if (!site) return null;
 
-  const vertical = site.vertical as {
-    slug: string;
-    term_category: string | null;
-    term_categories: string | null;
-    term_business: string | null;
-    term_businesses: string | null;
-    term_cta: string | null;
-  } | null;
-
+  const vertical = site.vertical;
   return {
     id: site.id,
     name: site.name,
@@ -53,6 +45,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
       term_businesses: vertical?.term_businesses ?? null,
       term_cta: vertical?.term_cta ?? null,
     },
+    defaultHeroUrl: vertical?.default_hero_url ?? null,
   };
 });
 
@@ -93,6 +86,29 @@ export const getRouteContext = cache(
       cityList,
       categories: new Set(categoryList.map((c) => c.slug)),
       cities: new Set(cityList.map((c) => c.slug)),
+    };
+  }
+);
+
+export interface SiteStats {
+  businessCount: number;
+  categoryCount: number;
+  cityCount: number;
+}
+
+export const getSiteStats = cache(
+  async (site: SiteConfig, ctx: RouteContext): Promise<SiteStats> => {
+    const supabase = await createClient();
+
+    const { count } = await supabase
+      .from('site_businesses')
+      .select('*', { count: 'exact', head: true })
+      .eq('site_id', site.id);
+
+    return {
+      businessCount: count ?? 0,
+      categoryCount: ctx.categoryList.length,
+      cityCount: ctx.cityList.length,
     };
   }
 );
