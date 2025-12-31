@@ -1,5 +1,5 @@
 import { SiteHeader, type NavItem } from '@/components/sites/site-header';
-import { getSiteConfig, getRouteContext } from '@/lib/routing/data';
+import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,8 +59,11 @@ export default async function SitesLayout({
     const routeContext = await getRouteContext(siteConfig);
 
     navItems = buildNavItems({
-      basePath: siteConfig.basePath,
-      terminology: siteConfig.terminology,
+      basePath: siteConfig.vertical?.slug ?? '',
+      terminology: {
+        term_cta: siteConfig.vertical?.term_cta ?? null,
+        term_categories: siteConfig.vertical?.term_categories ?? null,
+      },
       hasMultipleCategories: routeContext.categoryList.length > 1,
       hasMultipleCities: routeContext.cityList.length > 1,
     });

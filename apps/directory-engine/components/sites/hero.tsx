@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { SearchForm } from '@/components/sites/search-form';
-import type { SiteConfig, RouteContext } from '@/lib/routing';
+import type { SiteConfig, RouteContext } from '@/lib/types';
 
 interface HeroStats {
   businessCount?: number;
@@ -18,10 +18,10 @@ export function Hero({ site, ctx, stats }: HeroProps) {
   const hasMultipleCategories = ctx.categoryList.length > 1;
   const hasMultipleCities = ctx.cityList.length > 1;
 
-  const termBusiness = site.terminology.term_business || 'Business';
-  const termBusinesses = site.terminology.term_businesses || 'Businesses';
-  const termCategory = site.terminology.term_category || 'Category';
-  const termCategories = site.terminology.term_categories || 'Categories';
+  const termBusiness = site.vertical?.term_business || 'Business';
+  const termBusinesses = site.vertical?.term_businesses || 'Businesses';
+  const termCategory = site.vertical?.term_category || 'Category';
+  const termCategories = site.vertical?.term_categories || 'Categories';
 
   const statItems: { value: number; label: string }[] = [];
 
@@ -50,9 +50,9 @@ export function Hero({ site, ctx, stats }: HeroProps) {
     <section className="relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {site.defaultHeroUrl && (
+        {site.hero_path && (
           <Image
-            src={site.defaultHeroUrl}
+            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${site.hero_path}`}
             alt=""
             fill
             sizes="100vw"
@@ -76,7 +76,7 @@ export function Hero({ site, ctx, stats }: HeroProps) {
         {/* Search Form */}
         <div className="mx-auto mt-8 max-w-2xl">
           <SearchForm
-            basePath={site.basePath}
+            basePath={site.vertical?.slug ?? ''}
             categories={ctx.categoryList}
             cities={ctx.cityList}
             className="bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-xl"

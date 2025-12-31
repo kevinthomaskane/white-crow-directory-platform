@@ -1,4 +1,5 @@
-import type { ParsedRoute, SiteConfig, RouteContext } from './types';
+import type { ParsedRoute } from './types';
+import type { SiteConfig, RouteContext } from '@/lib/types';
 
 export function parseRoute(
   site: SiteConfig,
@@ -11,8 +12,10 @@ export function parseRoute(
 
   const [first, ...rest] = slug;
 
+  const basePath = site.vertical?.slug ?? '';
+
   // Directory routes: first segment is base_path
-  if (first === site.basePath) {
+  if (first === basePath) {
     return parseDirectoryRoute(site, rest, ctx);
   }
 
@@ -29,7 +32,7 @@ function parseDirectoryRoute(
   segments: string[],
   ctx: RouteContext
 ): ParsedRoute | null {
-  const basePath = site.basePath;
+  const basePath = site.vertical?.slug ?? '';
   const singleCity = ctx.cityList.length === 1;
   const singleCategory = ctx.categoryList.length === 1;
 

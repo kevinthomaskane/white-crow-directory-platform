@@ -1,4 +1,4 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig } from '@/lib/types';
 
 interface DirectoryBasePageProps {
   site: SiteConfig;
@@ -9,7 +9,7 @@ export function DirectoryBasePage({ site }: DirectoryBasePageProps) {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight capitalize">
-          {site.basePath.replace(/-/g, ' ')}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')}
         </h1>
         <p className="mt-2 text-muted-foreground">
           Search by category or location to find what you&apos;re looking for.

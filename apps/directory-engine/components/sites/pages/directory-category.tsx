@@ -1,4 +1,4 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig } from '@/lib/types';
 
 interface DirectoryCategoryPageProps {
   site: SiteConfig;
@@ -10,7 +10,7 @@ export function DirectoryCategoryPage({ site, category }: DirectoryCategoryPageP
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground capitalize">
-          {site.basePath.replace(/-/g, ' ')}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')}
         </p>
         <h1 className="text-3xl font-bold tracking-tight capitalize">
           {category.replace(/-/g, ' ')}

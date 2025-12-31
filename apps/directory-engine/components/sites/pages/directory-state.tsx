@@ -1,4 +1,4 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig } from '@/lib/types';
 
 interface DirectoryStatePageProps {
   site: SiteConfig;
@@ -10,10 +10,10 @@ export function DirectoryStatePage({ site, state }: DirectoryStatePageProps) {
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground capitalize">
-          {site.basePath.replace(/-/g, ' ')}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')}
         </p>
         <h1 className="text-3xl font-bold tracking-tight">
-          {site.basePath.replace(/-/g, ' ')} in {state.toUpperCase()}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')} in {state.toUpperCase()}
         </h1>
         <p className="mt-2 text-muted-foreground">
           Browse listings in {state.toUpperCase()} by category or city.

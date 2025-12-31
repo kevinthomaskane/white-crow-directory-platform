@@ -1,4 +1,4 @@
-import type { SiteConfig, RouteContext } from '@/lib/routing';
+import type { SiteConfig, RouteContext } from '@/lib/types';
 import { Hero } from '@/components/sites/hero';
 
 interface HomePageProps {

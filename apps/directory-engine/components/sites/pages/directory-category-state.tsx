@@ -1,4 +1,4 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig } from '@/lib/types';
 
 interface DirectoryCategoryStatePageProps {
   site: SiteConfig;
@@ -15,7 +15,7 @@ export function DirectoryCategoryStatePage({
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground capitalize">
-          {site.basePath.replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')}
         </p>
         <h1 className="text-3xl font-bold tracking-tight capitalize">
           {category.replace(/-/g, ' ')} in {state.toUpperCase()}

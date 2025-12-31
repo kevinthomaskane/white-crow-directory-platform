@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Globe, MapPin, Layers, Building2 } from 'lucide-react';
 import { SyncSearchButton } from '@/components/admin/sync-search-button';
+import { SiteAssetsForm } from '@/components/admin/site-assets-form';
 
 interface SiteDetailPageProps {
   params: Promise<{ id: string }>;
@@ -26,6 +27,10 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
       `
       id,
       name,
+      domain,
+      hero_path,
+      logo_path,
+      favicon_path,
       created_at,
       updated_at,
       vertical:verticals(id, name, slug),
@@ -180,6 +185,24 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             {businessCount} businesses will be indexed.
           </p>
           <SyncSearchButton siteId={site.id} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Site Assets</CardTitle>
+          <CardDescription>
+            Upload branding assets for this site.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SiteAssetsForm
+            siteId={site.id}
+            siteDomain={site.domain}
+            currentHeroPath={site.hero_path}
+            currentLogoPath={site.logo_path}
+            currentFaviconPath={site.favicon_path}
+          />
         </CardContent>
       </Card>
     </div>

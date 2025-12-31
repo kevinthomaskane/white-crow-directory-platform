@@ -22,7 +22,7 @@ import {
   type BusinessSuggestion,
 } from '@/actions/search-suggestions';
 import { slugify, cn } from '@/lib/utils';
-import type { CategoryData, CityData } from '@/lib/routing';
+import type { CategoryData, CityData } from '@/lib/types';
 
 type SearchFormProps = {
   basePath: string;

@@ -1,10 +1,6 @@
 import { notFound } from 'next/navigation';
-import {
-  parseRoute,
-  getSiteConfig,
-  getRouteContext,
-  getSiteStats,
-} from '@/lib/routing';
+import { parseRoute } from '@/lib/routing';
+import { getSiteConfig, getRouteContext, getSiteStats } from '@/lib/data/site';
 
 // Page components
 import {

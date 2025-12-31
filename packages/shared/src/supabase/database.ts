@@ -487,7 +487,10 @@ export type Database = {
         Row: {
           created_at: string
           domain: string
+          favicon_path: string | null
+          hero_path: string | null
           id: string
+          logo_path: string | null
           name: string
           state_id: string
           updated_at: string
@@ -496,7 +499,10 @@ export type Database = {
         Insert: {
           created_at?: string
           domain: string
+          favicon_path?: string | null
+          hero_path?: string | null
           id?: string
+          logo_path?: string | null
           name: string
           state_id: string
           updated_at?: string
@@ -505,7 +511,10 @@ export type Database = {
         Update: {
           created_at?: string
           domain?: string
+          favicon_path?: string | null
+          hero_path?: string | null
           id?: string
+          logo_path?: string | null
           name?: string
           state_id?: string
           updated_at?: string
@@ -549,10 +558,8 @@ export type Database = {
       verticals: {
         Row: {
           created_at: string
-          default_hero_url: string | null
           description: string | null
           id: string
-          logo_url: string | null
           name: string
           slug: string
           term_business: string | null
@@ -563,10 +570,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          default_hero_url?: string | null
           description?: string | null
           id?: string
-          logo_url?: string | null
           name: string
           slug: string
           term_business?: string | null
@@ -577,10 +582,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          default_hero_url?: string | null
           description?: string | null
           id?: string
-          logo_url?: string | null
           name?: string
           slug?: string
           term_business?: string | null

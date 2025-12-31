@@ -2,14 +2,20 @@
 
 import { createServiceRoleClient } from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
-import type { ActionsResponse, VerticalAssetType } from '@/lib/types';
+import type { ActionsResponse, SiteAssetType } from '@/lib/types';
 
-export async function getVerticalAssetUploadUrl(
-  verticalSlug: string,
-  assetType: VerticalAssetType
-): Promise<ActionsResponse<{ uploadUrl: string; publicUrl: string }>> {
-  if (!verticalSlug) {
-    return { ok: false, error: 'Vertical slug is required.' };
+const ASSET_TYPE_TO_COLUMN: Record<SiteAssetType, string> = {
+  hero: 'hero_path',
+  logo: 'logo_path',
+  favicon: 'favicon_path',
+};
+
+export async function getSiteAssetUploadUrl(
+  siteDomain: string,
+  assetType: SiteAssetType
+): Promise<ActionsResponse<{ uploadUrl: string; path: string }>> {
+  if (!siteDomain) {
+    return { ok: false, error: 'Site domain is required.' };
   }
 
   // Verify user is authenticated
@@ -29,7 +35,7 @@ export async function getVerticalAssetUploadUrl(
     process.env.SUPABASE_SECRET_KEY!
   );
 
-  const bucketName = verticalSlug;
+  const bucketName = siteDomain;
 
   // Check if bucket exists, create if not
   const { data: buckets } = await serviceClient.storage.listBuckets();
@@ -65,20 +71,22 @@ export async function getVerticalAssetUploadUrl(
     };
   }
 
-  const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucketName}/${filename}`;
+  // Return the path (bucket/filename) instead of full URL
+  const path = `${bucketName}/${filename}`;
 
   return {
     ok: true,
     data: {
       uploadUrl: data.signedUrl,
-      publicUrl,
+      path,
     },
   };
 }
 
-export async function saveVerticalHeroUrl(
-  verticalId: string,
-  heroUrl: string
+export async function saveSiteAssetPath(
+  siteId: string,
+  assetType: SiteAssetType,
+  path: string
 ): Promise<ActionsResponse<null>> {
   const supabase = await createClient();
 
@@ -91,10 +99,12 @@ export async function saveVerticalHeroUrl(
     return { ok: false, error: 'You must be logged in.' };
   }
 
+  const column = ASSET_TYPE_TO_COLUMN[assetType];
+
   const { error } = await supabase
-    .from('verticals')
-    .update({ default_hero_url: heroUrl })
-    .eq('id', verticalId);
+    .from('sites')
+    .update({ [column]: path })
+    .eq('id', siteId);
 
   if (error) {
     return { ok: false, error: error.message };

@@ -2,7 +2,13 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
-import type { SiteConfig, RouteContext, CategoryData, CityData } from './types';
+import type {
+  SiteConfig,
+  RouteContext,
+  CategoryData,
+  CityData,
+  SiteStats,
+} from '@/lib/types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
   const headersList = await headers();
@@ -18,10 +24,12 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
       `
       id,
       name,
-      domain,
       vertical_id,
       state_id,
-      vertical:verticals(slug, term_category, term_categories, term_business, term_businesses, term_cta, default_hero_url),
+      hero_path,
+      logo_path,
+      favicon_path,
+      vertical:verticals(slug, term_category, term_categories, term_business, term_businesses, term_cta),
       state:states(code)
     `
     )
@@ -30,42 +38,35 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   if (!site) return null;
 
-  const vertical = site.vertical;
-  return {
+  const siteConfig: SiteConfig = {
     id: site.id,
     name: site.name,
-    basePath: vertical?.slug || '',
-    verticalId: site.vertical_id,
-    stateId: site.state_id,
-    stateCode: (site.state as { code: string })?.code || '',
-    terminology: {
-      term_category: vertical?.term_category ?? null,
-      term_categories: vertical?.term_categories ?? null,
-      term_business: vertical?.term_business ?? null,
-      term_businesses: vertical?.term_businesses ?? null,
-      term_cta: vertical?.term_cta ?? null,
-    },
-    defaultHeroUrl: vertical?.default_hero_url ?? null,
+    vertical_id: site.vertical_id,
+    state_id: site.state_id,
+    hero_path: site.hero_path,
+    logo_path: site.logo_path,
+    favicon_path: site.favicon_path,
+    vertical: site.vertical,
+    state: site.state,
   };
+
+  return siteConfig;
 });
 
 export const getRouteContext = cache(
   async (site: SiteConfig): Promise<RouteContext> => {
     const supabase = await createClient();
 
-    // Get categories enabled for this site
     const { data: siteCategories } = await supabase
       .from('site_categories')
       .select('category:categories(slug, name)')
       .eq('site_id', site.id);
 
-    // Get cities enabled for this site
     const { data: siteCities } = await supabase
       .from('site_cities')
       .select('city:cities(name)')
       .eq('site_id', site.id);
 
-    // Build category list and set
     const categoryList: CategoryData[] = (siteCategories || [])
       .map((sc) => {
         const cat = sc.category as { slug: string; name: string } | null;
@@ -73,7 +74,6 @@ export const getRouteContext = cache(
       })
       .filter((c): c is CategoryData => c !== null);
 
-    // Build city list and set (slugify city names)
     const cityList: CityData[] = (siteCities || [])
       .map((sc) => {
         const city = sc.city as { name: string } | null;
@@ -89,12 +89,6 @@ export const getRouteContext = cache(
     };
   }
 );
-
-export interface SiteStats {
-  businessCount: number;
-  categoryCount: number;
-  cityCount: number;
-}
 
 export const getSiteStats = cache(
   async (site: SiteConfig, ctx: RouteContext): Promise<SiteStats> => {

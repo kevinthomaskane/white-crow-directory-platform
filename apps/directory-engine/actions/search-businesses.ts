@@ -5,7 +5,7 @@ import {
   BUSINESSES_COLLECTION,
   type BusinessDocument,
 } from '@white-crow/shared';
-import { getSiteConfig } from '@/lib/routing';
+import { getSiteConfig } from '@/lib/data/site';
 
 export type SearchResult = {
   business_id: string;

@@ -1,4 +1,4 @@
-import type { SiteConfig } from '@/lib/routing';
+import type { SiteConfig } from '@/lib/types';
 
 interface DirectoryCityPageProps {
   site: SiteConfig;
@@ -10,13 +10,13 @@ export function DirectoryCityPage({ site, city }: DirectoryCityPageProps) {
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground capitalize">
-          {site.basePath.replace(/-/g, ' ')} &rsaquo; {site.stateCode}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')} &rsaquo; {site.state?.code ?? ''}
         </p>
         <h1 className="text-3xl font-bold tracking-tight capitalize">
-          {site.basePath.replace(/-/g, ' ')} in {city.replace(/-/g, ' ')}, {site.stateCode}
+          {(site.vertical?.slug ?? '').replace(/-/g, ' ')} in {city.replace(/-/g, ' ')}, {site.state?.code ?? ''}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Browse listings in {city.replace(/-/g, ' ')}, {site.stateCode} by category.
+          Browse listings in {city.replace(/-/g, ' ')}, {site.state?.code ?? ''} by category.
         </p>
       </div>
 

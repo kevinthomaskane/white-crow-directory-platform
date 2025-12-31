@@ -284,7 +284,10 @@ CREATE TABLE IF NOT EXISTS "public"."sites" (
     "state_id" "uuid" NOT NULL,
     "vertical_id" "uuid" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "domain" "text" NOT NULL
+    "domain" "text" NOT NULL,
+    "hero_path" "text",
+    "logo_path" "text",
+    "favicon_path" "text"
 );
 
 
@@ -315,9 +318,7 @@ CREATE TABLE IF NOT EXISTS "public"."verticals" (
     "term_categories" "text" DEFAULT 'Categories'::"text",
     "term_business" "text" DEFAULT 'Business'::"text",
     "term_businesses" "text" DEFAULT 'Businesses'::"text",
-    "term_cta" "text" DEFAULT 'Find'::"text",
-    "logo_url" "text",
-    "default_hero_url" "text"
+    "term_cta" "text" DEFAULT '''Find a Business''::text'::"text"
 );
 
 

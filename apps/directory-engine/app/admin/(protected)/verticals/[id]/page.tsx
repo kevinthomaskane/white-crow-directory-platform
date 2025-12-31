@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { EditVerticalForm } from '@/components/admin/edit-vertical-form';
-import { VerticalAssetsForm } from '@/components/admin/vertical-assets-form';
 
 interface VerticalEditPageProps {
   params: Promise<{ id: string }>;
@@ -34,9 +33,7 @@ export default async function VerticalEditPage({
       term_categories,
       term_business,
       term_businesses,
-      term_cta,
-      logo_url,
-      default_hero_url
+      term_cta
     `
     )
     .eq('id', id)
@@ -57,40 +54,22 @@ export default async function VerticalEditPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{vertical.name}</h1>
           <p className="mt-1 text-muted-foreground">
-            Configure terminology and assets for this vertical.
+            Configure terminology for this vertical.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Terminology</CardTitle>
-            <CardDescription>
-              Customize the language used throughout sites in this vertical.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EditVerticalForm vertical={vertical} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Assets</CardTitle>
-            <CardDescription>
-              Default images for sites in this vertical.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <VerticalAssetsForm
-              verticalId={vertical.id}
-              verticalSlug={vertical.slug}
-              currentHeroUrl={vertical.default_hero_url}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="max-w-xl">
+        <CardHeader>
+          <CardTitle>Terminology</CardTitle>
+          <CardDescription>
+            Customize the language used throughout sites in this vertical.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EditVerticalForm vertical={vertical} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
