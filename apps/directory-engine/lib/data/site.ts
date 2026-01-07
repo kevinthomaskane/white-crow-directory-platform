@@ -7,6 +7,7 @@ import type {
   RouteContext,
   CategoryData,
   CityData,
+  PopularCityData,
   SiteStats,
 } from '@/lib/types';
 
@@ -104,5 +105,33 @@ export const getSiteStats = cache(
       categoryCount: ctx.categoryList.length,
       cityCount: ctx.cityList.length,
     };
+  }
+);
+
+export const getPopularCities = cache(
+  async (siteId: string, limit = 30): Promise<PopularCityData[]> => {
+    const supabase = await createClient();
+
+    const { data } = await supabase
+      .from('site_cities')
+      .select('city:cities(name, population)')
+      .eq('site_id', siteId)
+      .order('city(population)', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (!data) return [];
+
+    return data
+      .map((sc) => {
+        const city = sc.city;
+        return city
+          ? {
+              slug: slugify(city.name),
+              name: city.name,
+              population: city.population,
+            }
+          : null;
+      })
+      .filter((c) => c !== null);
   }
 );

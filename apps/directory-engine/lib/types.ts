@@ -11,12 +11,22 @@ type JobInsert = Database['public']['Tables']['jobs']['Insert'];
 // Site types
 export type SiteTerminology = Pick<
   Vertical,
-  'term_category' | 'term_categories' | 'term_business' | 'term_businesses' | 'term_cta'
+  | 'term_category'
+  | 'term_categories'
+  | 'term_business'
+  | 'term_businesses'
+  | 'term_cta'
 >;
 
 export type SiteConfig = Pick<
   Site,
-  'id' | 'name' | 'vertical_id' | 'state_id' | 'hero_path' | 'logo_path' | 'favicon_path'
+  | 'id'
+  | 'name'
+  | 'vertical_id'
+  | 'state_id'
+  | 'hero_path'
+  | 'logo_path'
+  | 'favicon_path'
 > & {
   vertical: (SiteTerminology & Pick<Vertical, 'slug'>) | null;
   state: Pick<State, 'code'> | null;
@@ -24,6 +34,7 @@ export type SiteConfig = Pick<
 
 export type CategoryData = { slug: string; name: string };
 export type CityData = { slug: string; name: string };
+export type PopularCityData = CityData & Pick<City, 'population'>;
 
 export interface RouteContext {
   categoryList: CategoryData[];
