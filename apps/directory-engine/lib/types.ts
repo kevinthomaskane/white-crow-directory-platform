@@ -103,3 +103,21 @@ export type ActionsResponse<T> =
     };
 
 export type SiteAssetType = 'hero' | 'logo' | 'favicon';
+
+// Business types
+type Business = Database['public']['Tables']['businesses']['Row'];
+type SiteBusiness = Database['public']['Tables']['site_businesses']['Row'];
+type BusinessReviewSource =
+  Database['public']['Tables']['business_review_sources']['Row'];
+
+export type TopBusinessData = Pick<
+  Business,
+  'id' | 'name' | 'city' | 'editorial_summary' | 'main_photo_name'
+> &
+  Pick<SiteBusiness, 'is_claimed'> & {
+    category: CategoryData | null;
+    reviewSource: Pick<
+      BusinessReviewSource,
+      'rating' | 'provider'
+    > | null;
+  };

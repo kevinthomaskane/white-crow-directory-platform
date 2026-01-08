@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@white-crow/shared';
 import { slugify } from '@/lib/utils';
 import type {
   SiteConfig,
@@ -9,6 +9,7 @@ import type {
   CityData,
   PopularCityData,
   SiteStats,
+  TopBusinessData,
 } from '@/lib/types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
@@ -17,7 +18,10 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
   if (!domain) return null;
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
 
   const { data: site } = await supabase
     .from('sites')
@@ -56,7 +60,10 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
 
 export const getRouteContext = cache(
   async (site: SiteConfig): Promise<RouteContext> => {
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
 
     const { data: siteCategories } = await supabase
       .from('site_categories')
@@ -93,7 +100,10 @@ export const getRouteContext = cache(
 
 export const getSiteStats = cache(
   async (site: SiteConfig, ctx: RouteContext): Promise<SiteStats> => {
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
 
     const { count } = await supabase
       .from('site_businesses')
@@ -110,7 +120,10 @@ export const getSiteStats = cache(
 
 export const getPopularCities = cache(
   async (siteId: string, limit = 30): Promise<PopularCityData[]> => {
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
 
     const { data } = await supabase
       .from('site_cities')
@@ -132,6 +145,74 @@ export const getPopularCities = cache(
             }
           : null;
       })
-      .filter((c) => c !== null);
+      .filter((c) => c !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+);
+
+export const getTopBusinesses = cache(
+  async (siteId: string, limit = 10): Promise<TopBusinessData[]> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    // Fetch all site businesses with their details
+    const { data } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses(
+          id,
+          name,
+          city,
+          editorial_summary,
+          main_photo_name,
+          business_review_sources(rating, provider),
+          business_categories(category:categories(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId);
+
+    if (!data) return [];
+
+    // Transform and filter to only businesses with ratings
+    const businesses = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+
+        // Skip businesses without ratings
+        if (!reviewSource?.rating) return null;
+
+        const categoryJoin = business.business_categories?.[0];
+        const category = categoryJoin?.category
+          ? {
+              slug: categoryJoin.category.slug,
+              name: categoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          editorial_summary: business.editorial_summary,
+          main_photo_name: business.main_photo_name,
+          is_claimed: sb.is_claimed,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    // Sort by rating descending and limit results
+    return businesses
+      .sort((a, b) => (b.reviewSource?.rating ?? 0) - (a.reviewSource?.rating ?? 0))
+      .slice(0, limit);
   }
 );
