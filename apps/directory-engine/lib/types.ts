@@ -110,14 +110,40 @@ type SiteBusiness = Database['public']['Tables']['site_businesses']['Row'];
 type BusinessReviewSource =
   Database['public']['Tables']['business_review_sources']['Row'];
 
-export type TopBusinessData = Pick<
+export type BusinessCardData = Pick<
   Business,
-  'id' | 'name' | 'city' | 'editorial_summary' | 'main_photo_name'
+  | 'id'
+  | 'name'
+  | 'city'
+  | 'editorial_summary'
+  | 'main_photo_name'
+  | 'phone'
+  | 'website'
+  | 'formatted_address'
 > &
   Pick<SiteBusiness, 'is_claimed'> & {
     category: CategoryData | null;
     reviewSource: Pick<
       BusinessReviewSource,
-      'rating' | 'provider'
+      'rating' | 'provider' | 'review_count'
     > | null;
   };
+
+// Map types
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export type MapBusinessData = Pick<
+  Business,
+  'id' | 'name' | 'city' | 'phone' | 'formatted_address'
+> & {
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  review_count: number | null;
+  categorySlug: string | null;
+};

@@ -61,11 +61,11 @@ export function Hero({ site, ctx, stats }: HeroProps) {
           />
         )}
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-black/70" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 text-center md:py-36">
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 text-center md:py-42">
         <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl lg:text-6xl">
           {site.name}
         </h1>

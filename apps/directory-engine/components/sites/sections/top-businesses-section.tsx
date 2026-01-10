@@ -1,11 +1,10 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Star, ChevronRight, Building2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn, slugify } from '@/lib/utils';
 import { getTopBusinesses } from '@/lib/data/site';
-import { Badge } from '@/components/ui/badge';
-import type { TopBusinessData, RouteContext } from '@/lib/types';
+import { BusinessCard } from '@/components/sites/business-card';
+import type { BusinessCardData, RouteContext } from '@/lib/types';
 
 interface TopBusinessesSectionProps {
   siteId: string;
@@ -59,13 +58,12 @@ async function BusinessesContent({
           </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-4">
           {businesses.map((business) => (
             <BusinessCard
               key={business.id}
               business={business}
-              basePath={basePath}
-              ctx={ctx}
+              href={buildBusinessUrl(business, basePath, ctx)}
             />
           ))}
         </div>
@@ -74,99 +72,8 @@ async function BusinessesContent({
   );
 }
 
-interface BusinessCardProps {
-  business: TopBusinessData;
-  basePath: string;
-  ctx: RouteContext;
-}
-
-function BusinessCard({ business, basePath, ctx }: BusinessCardProps) {
-  const href = buildBusinessUrl(business, basePath, ctx);
-  const providerLabel = formatProvider(business.reviewSource?.provider);
-
-  return (
-    <Link
-      href={href}
-      className="group flex gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-sm"
-    >
-      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-        {business.main_photo_name ? (
-          <Image
-            src={`/api/places-photo?name=${encodeURIComponent(business.main_photo_name)}&maxHeight=200`}
-            alt={business.name}
-            fill
-            sizes="80px"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Building2 className="h-8 w-8 text-muted-foreground" />
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
-            {business.name}
-          </h3>
-          <Badge
-            variant={business.is_claimed ? 'default' : 'outline'}
-            className="flex-shrink-0 text-xs"
-          >
-            {business.is_claimed ? 'Verified' : 'Unclaimed'}
-          </Badge>
-        </div>
-
-        {business.reviewSource?.rating && (
-          <div className="mt-1 flex items-center gap-1 text-sm">
-            <RatingStars rating={business.reviewSource.rating} />
-            <span className="font-medium">{business.reviewSource.rating}</span>
-            {providerLabel && (
-              <span className="text-muted-foreground">on {providerLabel}</span>
-            )}
-          </div>
-        )}
-
-        <div className="mt-1 text-sm text-muted-foreground truncate">
-          {[business.category?.name, business.city].filter(Boolean).join(' • ')}
-        </div>
-
-        {business.editorial_summary && (
-          <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-            {business.editorial_summary}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-function RatingStars({ rating }: { rating: number }) {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star
-          key={i}
-          className={cn(
-            'h-3.5 w-3.5',
-            i < fullStars
-              ? 'fill-yellow-400 text-yellow-400'
-              : i === fullStars && hasHalfStar
-                ? 'fill-yellow-400/50 text-yellow-400'
-                : 'text-muted-foreground/30'
-          )}
-        />
-      ))}
-    </div>
-  );
-}
-
 function buildBusinessUrl(
-  business: TopBusinessData,
+  business: BusinessCardData,
   basePath: string,
   ctx: RouteContext
 ): string {
@@ -192,18 +99,6 @@ function buildBusinessUrl(
   return '/' + parts.join('/');
 }
 
-function formatProvider(provider: string | null | undefined): string | null {
-  if (!provider) return null;
-
-  const providerMap: Record<string, string> = {
-    google_places: 'Google',
-    yelp: 'Yelp',
-    facebook: 'Facebook',
-  };
-
-  return providerMap[provider] || provider;
-}
-
 function BusinessesSkeleton({ title = 'Top Rated' }: { title?: string }) {
   return (
     <section className="w-full">
@@ -211,17 +106,18 @@ function BusinessesSkeleton({ title = 'Top Rated' }: { title?: string }) {
         <div className="mb-6">
           <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="flex gap-4 rounded-lg border border-border bg-card p-4"
+              className="flex w-full gap-4 rounded-lg border border-border bg-card p-4 sm:gap-6"
             >
-              <div className="h-20 w-20 flex-shrink-0 rounded-md bg-muted animate-pulse" />
+              <div className="h-24 w-24 flex-shrink-0 rounded-lg bg-muted animate-pulse sm:h-32 sm:w-32" />
               <div className="flex flex-1 flex-col">
-                <div className="h-5 w-3/4 rounded bg-muted animate-pulse" />
+                <div className="h-6 w-1/3 rounded bg-muted animate-pulse" />
+                <div className="mt-2 h-4 w-1/4 rounded bg-muted animate-pulse" />
                 <div className="mt-2 h-4 w-1/2 rounded bg-muted animate-pulse" />
-                <div className="mt-2 h-4 w-2/3 rounded bg-muted animate-pulse" />
+                <div className="mt-3 h-4 w-3/4 rounded bg-muted animate-pulse hidden sm:block" />
               </div>
             </div>
           ))}

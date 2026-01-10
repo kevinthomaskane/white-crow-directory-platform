@@ -9,7 +9,9 @@ import type {
   CityData,
   PopularCityData,
   SiteStats,
-  TopBusinessData,
+  BusinessCardData,
+  MapBusinessData,
+  MapBounds,
 } from '@/lib/types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
@@ -151,7 +153,7 @@ export const getPopularCities = cache(
 );
 
 export const getTopBusinesses = cache(
-  async (siteId: string, limit = 10): Promise<TopBusinessData[]> => {
+  async (siteId: string, limit = 10): Promise<BusinessCardData[]> => {
     const supabase = createServiceRoleClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SECRET_KEY!
@@ -169,7 +171,10 @@ export const getTopBusinesses = cache(
           city,
           editorial_summary,
           main_photo_name,
-          business_review_sources(rating, provider),
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
           business_categories(category:categories(slug, name))
         )
       `
@@ -203,6 +208,9 @@ export const getTopBusinesses = cache(
           city: business.city,
           editorial_summary: business.editorial_summary,
           main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
           category,
           reviewSource,
@@ -212,7 +220,175 @@ export const getTopBusinesses = cache(
 
     // Sort by rating descending and limit results
     return businesses
-      .sort((a, b) => (b.reviewSource?.rating ?? 0) - (a.reviewSource?.rating ?? 0))
+      .sort(
+        (a, b) => (b.reviewSource?.rating ?? 0) - (a.reviewSource?.rating ?? 0)
+      )
       .slice(0, limit);
   }
 );
+
+// Map data functions
+export interface InitialMapData {
+  center: { latitude: number; longitude: number };
+  cityName: string;
+  businesses: MapBusinessData[];
+}
+
+export const getInitialMapData = cache(
+  async (siteId: string, limit = 200): Promise<InitialMapData | null> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    // Get the most populous city for this site
+    const { data: cityData } = await supabase
+      .from('site_cities')
+      .select('city:cities(id, name, latitude, longitude, population)')
+      .eq('site_id', siteId)
+      .order('city(population)', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .single();
+
+    if (!cityData?.city) return null;
+
+    const city = cityData.city as {
+      id: string;
+      name: string;
+      latitude: number;
+      longitude: number;
+      population: number | null;
+    };
+
+    // Get businesses in this city
+    const { data: businessData } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          latitude,
+          longitude,
+          phone,
+          formatted_address,
+          city_id,
+          business_review_sources(rating, review_count),
+          business_categories(category:categories(slug))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .limit(limit);
+
+    if (!businessData) {
+      return {
+        center: { latitude: city.latitude, longitude: city.longitude },
+        cityName: city.name,
+        businesses: [],
+      };
+    }
+
+    // Filter to businesses in the target city with valid coordinates
+    const businesses: MapBusinessData[] = businessData
+      .map((sb) => {
+        const business = sb.business;
+        if (!business || !business.latitude || !business.longitude) return null;
+        if (business.city_id !== city.id) return null;
+
+        const reviewSource = business.business_review_sources?.[0];
+        const categoryJoin = business.business_categories?.[0];
+        const categorySlug = categoryJoin?.category?.slug ?? null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          latitude: business.latitude,
+          longitude: business.longitude,
+          phone: business.phone,
+          formatted_address: business.formatted_address,
+          rating: reviewSource?.rating ?? null,
+          review_count: reviewSource?.review_count ?? null,
+          categorySlug,
+        };
+      })
+      .filter((b) => b !== null);
+
+    return {
+      center: { latitude: city.latitude, longitude: city.longitude },
+      cityName: city.name,
+      businesses,
+    };
+  }
+);
+
+export async function getBusinessesInBounds(
+  siteId: string,
+  bounds: MapBounds,
+  limit = 200,
+  excludeIds: string[] = []
+): Promise<MapBusinessData[]> {
+  const supabase = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
+
+  // Build query for businesses within bounds
+  const query = supabase
+    .from('site_businesses')
+    .select(
+      `
+      business:businesses!inner(
+        id,
+        name,
+        city,
+        latitude,
+        longitude,
+        phone,
+        formatted_address,
+        business_review_sources(rating, review_count),
+        business_categories(category:categories(slug))
+      )
+    `
+    )
+    .eq('site_id', siteId)
+    .gte('business.latitude', bounds.south)
+    .lte('business.latitude', bounds.north)
+    .gte('business.longitude', bounds.west)
+    .lte('business.longitude', bounds.east)
+    .limit(limit);
+
+  const { data } = await query;
+
+  if (!data) return [];
+
+  // Transform and filter
+  const businesses: MapBusinessData[] = data
+    .map((sb) => {
+      const business = sb.business;
+      if (!business || !business.latitude || !business.longitude) return null;
+      if (excludeIds.includes(business.id)) return null;
+
+      const reviewSource = business.business_review_sources?.[0];
+      const categoryJoin = business.business_categories?.[0];
+      const categorySlug = categoryJoin?.category?.slug ?? null;
+
+      return {
+        id: business.id,
+        name: business.name,
+        city: business.city,
+        latitude: business.latitude,
+        longitude: business.longitude,
+        phone: business.phone,
+        formatted_address: business.formatted_address,
+        rating: reviewSource?.rating ?? null,
+        review_count: reviewSource?.review_count ?? null,
+        categorySlug,
+      };
+    })
+    .filter((b) => b !== null);
+
+  return businesses;
+}
