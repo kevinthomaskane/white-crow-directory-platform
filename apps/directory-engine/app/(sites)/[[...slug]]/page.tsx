@@ -36,7 +36,7 @@ export default async function CatchAllPage({ params }: PageProps) {
     }
 
     case 'directory-base':
-      return <DirectoryBasePage site={site} />;
+      return <DirectoryBasePage ctx={ctx} site={site} />;
 
     case 'directory-category':
       return <DirectoryCategoryPage site={site} category={route.category} />;

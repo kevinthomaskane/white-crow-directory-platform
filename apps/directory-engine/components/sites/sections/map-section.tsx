@@ -51,10 +51,10 @@ async function MapSectionContent({
     return null;
   }
 
-  const sectionDescription = description || `Explore businesses in ${mapData.cityName}`;
+  const sectionDescription = description || 'Explore businesses in your area';
 
   return (
-    <section className={cn('w-full', className)}>
+    <section className={cn('w-full py-16', className)}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
@@ -70,8 +70,7 @@ async function MapSectionContent({
         />
 
         <p className="mt-3 text-sm text-muted-foreground">
-          Showing {mapData.businesses.length} businesses in {mapData.cityName}.
-          Pan or zoom the map to discover more.
+          Pan or zoom the map to discover more businesses.
         </p>
       </div>
     </section>

@@ -41,7 +41,7 @@ async function CitiesContent({
   const hasMore = totalCities > limit;
 
   return (
-    <section className={cn('w-full', className)}>
+    <section id="by-location" className={cn('w-full py-16', className)}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-6">
           <div>

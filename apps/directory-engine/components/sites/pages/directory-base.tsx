@@ -1,46 +1,92 @@
-import type { SiteConfig } from '@/lib/types';
+import type { SiteConfig, RouteContext, SiteStats } from '@/lib/types';
+import { SearchForm } from '@/components/sites/search-form';
+import { CategoriesSection } from '@/components/sites/sections/categories-section';
+import { PopularCitiesSection } from '@/components/sites/sections/popular-cities-section';
+import { TopBusinessesSection } from '@/components/sites/sections/top-businesses-section';
+import { MapSection } from '@/components/sites/sections/map-section';
 
 interface DirectoryBasePageProps {
   site: SiteConfig;
+  ctx: RouteContext;
+  stats?: SiteStats;
 }
 
-export function DirectoryBasePage({ site }: DirectoryBasePageProps) {
+export function DirectoryBasePage({
+  site,
+  ctx,
+  stats,
+}: DirectoryBasePageProps) {
+  const basePath = site.vertical?.slug ?? '';
+  const categoryTerm = site.vertical?.term_categories ?? 'Categories';
+  const businessTerm =
+    site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
+  const businessTermSingular = site.vertical?.term_business ?? 'Business';
+
+  const hasMultipleCities = ctx.cityList.length > 1;
+  const hasMultipleCategories = ctx.categoryList.length > 1;
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight capitalize">
-          {(site.vertical?.slug ?? '').replace(/-/g, ' ')}
+    <div className="py-16">
+      {/* Header */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mb-8">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
+          Browse {businessTerm.charAt(0).toUpperCase() + businessTerm.slice(1)}
         </h1>
-        <p className="mt-2 text-muted-foreground">
-          Search by category or location to find what you&apos;re looking for.
+        <p className="text-muted-foreground mb-6">
+          {hasMultipleCategories && hasMultipleCities
+            ? `Search by ${categoryTerm.toLowerCase()} or location to find the right ${businessTermSingular.toLowerCase()} for you.`
+            : hasMultipleCategories
+              ? `Browse by ${categoryTerm.toLowerCase()} to find the right ${businessTermSingular.toLowerCase()} for you.`
+              : hasMultipleCities
+                ? `Browse by location to find ${businessTerm} near you.`
+                : `Find the best ${businessTerm} in our directory.`}
         </p>
+
+        {/* Search Form */}
+        <SearchForm
+          basePath={basePath}
+          categories={ctx.categoryList}
+          cities={ctx.cityList}
+          className="max-w-3xl"
+        />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Popular Categories</h2>
-          <div className="space-y-2">
-            {/* TODO: Fetch and display categories */}
-            <PlaceholderItem />
-            <PlaceholderItem />
-            <PlaceholderItem />
-          </div>
-        </section>
+      <TopBusinessesSection
+        siteId={site.id}
+        basePath={basePath}
+        ctx={ctx}
+        title={`Top Rated ${businessTermSingular}s`}
+        description={`Highest rated ${businessTerm} in our directory`}
+      />
 
-        <section>
-          <h2 className="text-xl font-semibold mb-4">Popular Cities</h2>
-          <div className="space-y-2">
-            {/* TODO: Fetch and display cities */}
-            <PlaceholderItem />
-            <PlaceholderItem />
-            <PlaceholderItem />
-          </div>
-        </section>
-      </div>
+      {/* Browse Sections */}
+      {hasMultipleCategories && (
+        <CategoriesSection
+          className="bg-muted/30 pb-0 scroll-mt-16"
+          categories={ctx.categoryList}
+          basePath={basePath}
+          title={`Browse by ${categoryTerm}`}
+          description={`Find ${businessTerm} by specialty`}
+        />
+      )}
+
+      {hasMultipleCities && (
+        <PopularCitiesSection
+          className="bg-muted/30 scroll-mt-16"
+          siteId={site.id}
+          basePath={basePath}
+          title="Browse by Location"
+          description={`Find ${businessTerm} in your city`}
+          totalCities={ctx.cityList.length}
+        />
+      )}
+
+      <MapSection
+        siteId={site.id}
+        basePath={basePath}
+        ctx={ctx}
+        title={`Find ${businessTermSingular}s Near You`}
+      />
     </div>
   );
-}
-
-function PlaceholderItem() {
-  return <div className="h-10 rounded bg-muted" />;
 }

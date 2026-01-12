@@ -1,4 +1,5 @@
 import { SiteHeader, type NavItem } from '@/components/sites/site-header';
+import { SiteFooter } from '@/components/sites/site-footer';
 import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 
 export const dynamic = 'force-dynamic';
@@ -54,12 +55,15 @@ export default async function SitesLayout({
   const siteConfig = await getSiteConfig();
 
   let navItems: NavItem[] = [];
+  let routeContext = null;
+  let basePath = '';
 
   if (siteConfig) {
-    const routeContext = await getRouteContext(siteConfig);
+    routeContext = await getRouteContext(siteConfig);
+    basePath = siteConfig.vertical?.slug ?? '';
 
     navItems = buildNavItems({
-      basePath: siteConfig.vertical?.slug ?? '',
+      basePath,
       terminology: {
         term_cta: siteConfig.vertical?.term_cta ?? null,
         term_categories: siteConfig.vertical?.term_categories ?? null,
@@ -75,7 +79,14 @@ export default async function SitesLayout({
         logo={{ text: siteConfig?.name || 'Directory Site' }}
         navItems={navItems}
       />
-      <main className="mx-auto">{children}</main>
+      <main>{children}</main>
+      {siteConfig && routeContext && (
+        <SiteFooter
+          siteConfig={siteConfig}
+          routeContext={routeContext}
+          basePath={basePath}
+        />
+      )}
     </div>
   );
 }
