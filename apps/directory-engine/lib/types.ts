@@ -147,3 +147,43 @@ export type MapBusinessData = Pick<
   review_count: number | null;
   categorySlug: string | null;
 };
+
+// Business detail types
+type BusinessReview = Database['public']['Tables']['business_reviews']['Row'];
+
+export type BusinessDetailData = Pick<
+  Business,
+  | 'id'
+  | 'name'
+  | 'city'
+  | 'state'
+  | 'postal_code'
+  | 'street_address'
+  | 'formatted_address'
+  | 'phone'
+  | 'website'
+  | 'description'
+  | 'editorial_summary'
+  | 'main_photo_name'
+  | 'hours'
+  | 'latitude'
+  | 'longitude'
+> &
+  Pick<SiteBusiness, 'is_claimed'> & {
+    categories: CategoryData[];
+    reviewSources: Pick<
+      BusinessReviewSource,
+      'rating' | 'provider' | 'review_count' | 'url'
+    >[];
+  };
+
+export type BusinessReviewData = Pick<
+  BusinessReview,
+  | 'id'
+  | 'author_name'
+  | 'author_image_url'
+  | 'rating'
+  | 'text'
+  | 'time'
+  | 'source'
+>;

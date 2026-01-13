@@ -1,86 +1,368 @@
-import type { SiteConfig } from '@/lib/types';
+import { Suspense } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { notFound } from 'next/navigation';
+import { ChevronRight, Building2, MapPin, Loader2 } from 'lucide-react';
+import type { SiteConfig, RouteContext, BusinessDetailData } from '@/lib/types';
+import {
+  getBusinessDetails,
+  getBusinessReviews,
+  getRelatedBusinesses,
+} from '@/lib/data/site';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { RatingStars, formatProvider } from '@/components/sites/business-card';
+import { ClaimBusinessBanner } from '@/components/sites/sections/claim-business-banner';
+import { BusinessReviewsSection } from '@/components/sites/sections/business-reviews-section';
+import { BusinessContactCard } from '@/components/sites/sections/business-contact-card';
+import { RelatedBusinessesSection } from '@/components/sites/sections/related-businesses-section';
 
 interface DirectoryBusinessPageProps {
   site: SiteConfig;
+  ctx: RouteContext;
   category: string;
   city: string;
   businessId: string;
 }
 
-export function DirectoryBusinessPage({
+export async function DirectoryBusinessPage({
   site,
+  ctx,
   category,
   city,
   businessId,
 }: DirectoryBusinessPageProps) {
+  const basePath = site.vertical?.slug ?? '';
+  const businessTerm = site.vertical?.term_business ?? 'Business';
+  const businessTermPlural =
+    site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
+
+  const hasMultipleCategories = ctx.categoryList.length > 1;
+  const hasMultipleCities = ctx.cityList.length > 1;
+
+  // Fetch business details (critical for page render)
+  const business = await getBusinessDetails(site.id, businessId);
+
+  if (!business) return notFound();
+
+  // Find category and city names for breadcrumb
+  const categoryData = ctx.categoryList.find((c) => c.slug === category);
+  const cityData = ctx.cityList.find((c) => c.slug === city);
+  const primaryReviewSource = business.reviewSources[0];
+
+  // Build breadcrumb links
+  const buildCategoryUrl = () => `/${basePath}/${category}`;
+  const buildCityUrl = () => {
+    if (hasMultipleCategories) {
+      return `/${basePath}/${category}/${city}`;
+    }
+    return `/${basePath}/${city}`;
+  };
+
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-sm text-muted-foreground capitalize">
-          {(site.vertical?.slug ?? '').replace(/-/g, ' ')} &rsaquo; {category.replace(/-/g, ' ')} &rsaquo;{' '}
-          {city.replace(/-/g, ' ')}, {site.state?.code ?? ''}
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight">
-          {/* TODO: Fetch business name */}
-          Business Profile
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Business ID: {businessId}
-        </p>
+    <div>
+      {/* Header */}
+      <div className="bg-muted/30 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          {/* Breadcrumb */}
+          <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Link href={`/${basePath}`} className="hover:text-foreground">
+              {site.vertical?.term_businesses ?? 'Directory'}
+            </Link>
+            {categoryData && (
+              <>
+                <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                <Link
+                  href={buildCategoryUrl()}
+                  className="hover:text-foreground"
+                >
+                  {categoryData.name}
+                </Link>
+              </>
+            )}
+            {cityData && (
+              <>
+                <ChevronRight className="h-4 w-4 flex-shrink-0" />
+                <Link href={buildCityUrl()} className="hover:text-foreground">
+                  {cityData.name}, {site.state?.code ?? ''}
+                </Link>
+              </>
+            )}
+            <ChevronRight className="h-4 w-4 flex-shrink-0" />
+            <span className="text-foreground line-clamp-1">
+              {business.name}
+            </span>
+          </nav>
+
+          {/* Business Header */}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div className="flex-1">
+              {/* Title + Badge */}
+              <div className="flex flex-wrap items-start gap-3 mb-3">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {business.name}
+                </h1>
+                <Badge
+                  variant={business.is_claimed ? 'default' : 'outline'}
+                  className="flex-shrink-0"
+                >
+                  {business.is_claimed ? 'Verified' : 'Unclaimed'}
+                </Badge>
+              </div>
+
+              {/* Rating */}
+              {primaryReviewSource?.rating && (
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl font-semibold">
+                    {primaryReviewSource.rating}
+                  </span>
+                  <RatingStars rating={primaryReviewSource.rating} />
+                  <span className="text-muted-foreground">
+                    ({primaryReviewSource.review_count ?? 0} reviews on{' '}
+                    {formatProvider(primaryReviewSource.provider)})
+                  </span>
+                </div>
+              )}
+
+              {/* Categories */}
+              {business.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {business.categories.map((cat) => (
+                    <Link
+                      key={cat.slug}
+                      href={`/${basePath}/${cat.slug}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Location */}
+              {business.formatted_address && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                  <span>{business.formatted_address}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Claim CTA - Header */}
+            {!business.is_claimed && (
+              <div className="flex-shrink-0">
+                <Button size="lg">Claim This {businessTerm}</Button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <section className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-4">About</h2>
-            {/* TODO: Fetch and display business details */}
-            <div className="space-y-2">
-              <div className="h-4 w-full rounded bg-muted" />
-              <div className="h-4 w-full rounded bg-muted" />
-              <div className="h-4 w-3/4 rounded bg-muted" />
-            </div>
-          </section>
+      {/* Main Content */}
+      <div className="py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          {/* Claim Banner - Prominent */}
+          {!business.is_claimed && <ClaimBusinessBanner className="mb-8" />}
 
-          <section className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-4">Reviews</h2>
-            {/* TODO: Fetch and display reviews */}
-            <div className="space-y-4">
-              <PlaceholderReview />
-              <PlaceholderReview />
+          <div className="grid gap-8 lg:grid-cols-3">
+            {/* Left Column - Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* About Section */}
+              <section className="rounded-lg border border-border bg-card p-6">
+                <h2 className="text-xl font-semibold mb-4">
+                  About {business.name}
+                </h2>
+
+                {/* Business Photo */}
+                {business.main_photo_name && (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4">
+                    <Image
+                      src={`/api/places-photo?name=${encodeURIComponent(business.main_photo_name)}&maxHeight=600`}
+                      alt={business.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 66vw"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                )}
+
+                {!business.main_photo_name && (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4 flex items-center justify-center">
+                    <Building2 className="h-16 w-16 text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Editorial Summary */}
+                {business.editorial_summary ? (
+                  <p className="text-muted-foreground leading-relaxed">
+                    {business.editorial_summary}
+                  </p>
+                ) : business.description ? (
+                  <p className="text-muted-foreground leading-relaxed">
+                    {business.description}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    No description available for this{' '}
+                    {businessTerm.toLowerCase()}.
+                  </p>
+                )}
+              </section>
+
+              {/* Reviews Section - Suspense */}
+              <Suspense fallback={<ReviewsSkeleton />}>
+                <AsyncReviewsSection
+                  businessId={businessId}
+                  reviewSources={business.reviewSources}
+                />
+              </Suspense>
+
+              {/* Map Section */}
+              {business.latitude && business.longitude && (
+                <section className="rounded-lg border border-border bg-card p-6">
+                  <h2 className="text-xl font-semibold mb-4">Location</h2>
+                  <div className="aspect-video w-full rounded-lg bg-muted flex items-center justify-center">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <MapPin className="h-5 w-5" />
+                      View on Google Maps
+                    </a>
+                  </div>
+                  {business.formatted_address && (
+                    <p className="mt-4 text-muted-foreground">
+                      {business.formatted_address}
+                    </p>
+                  )}
+                </section>
+              )}
             </div>
-          </section>
+
+            {/* Right Column - Sidebar */}
+            <div className="space-y-6">
+              <div className="lg:sticky lg:top-20">
+                <BusinessContactCard
+                  phone={business.phone}
+                  website={business.website}
+                  formattedAddress={business.formatted_address}
+                  latitude={business.latitude}
+                  longitude={business.longitude}
+                  hours={business.hours}
+                />
+
+                {/* Secondary Claim CTA */}
+                {!business.is_claimed && (
+                  <div className="mt-6 rounded-lg border border-border bg-card p-4">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Is this your business? Claim your listing to manage it.
+                    </p>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Claim Listing
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Related Businesses - Suspense */}
+          <Suspense fallback={<RelatedBusinessesSkeleton />}>
+            <AsyncRelatedBusinesses
+              siteId={site.id}
+              businessId={businessId}
+              businessCity={business.city}
+              categorySlug={hasMultipleCategories ? category : null}
+              basePath={basePath}
+              hasMultipleCategories={hasMultipleCategories}
+              hasMultipleCities={hasMultipleCities}
+              title={`Similar ${businessTermPlural} in ${cityData?.name ?? business.city ?? 'your area'}`}
+            />
+          </Suspense>
         </div>
-
-        <aside className="space-y-6">
-          <section className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Contact</h2>
-            {/* TODO: Fetch and display contact info */}
-            <div className="space-y-2">
-              <div className="h-4 w-full rounded bg-muted" />
-              <div className="h-4 w-2/3 rounded bg-muted" />
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Hours</h2>
-            {/* TODO: Fetch and display hours */}
-            <div className="space-y-2">
-              <div className="h-4 w-full rounded bg-muted" />
-              <div className="h-4 w-full rounded bg-muted" />
-            </div>
-          </section>
-        </aside>
       </div>
     </div>
   );
 }
 
-function PlaceholderReview() {
+// Async component for reviews
+async function AsyncReviewsSection({
+  businessId,
+  reviewSources,
+}: {
+  businessId: string;
+  reviewSources: BusinessDetailData['reviewSources'];
+}) {
+  const reviews = await getBusinessReviews(businessId);
+
   return (
-    <div className="border-b border-border pb-4 last:border-0">
-      <div className="h-4 w-1/4 rounded bg-muted" />
-      <div className="mt-2 h-3 w-full rounded bg-muted" />
-      <div className="mt-1 h-3 w-2/3 rounded bg-muted" />
-    </div>
+    <BusinessReviewsSection reviews={reviews} reviewSources={reviewSources} />
+  );
+}
+
+// Async component for related businesses
+async function AsyncRelatedBusinesses({
+  siteId,
+  businessId,
+  businessCity,
+  categorySlug,
+  basePath,
+  hasMultipleCategories,
+  hasMultipleCities,
+  title,
+}: {
+  siteId: string;
+  businessId: string;
+  businessCity: string | null;
+  categorySlug: string | null;
+  basePath: string;
+  hasMultipleCategories: boolean;
+  hasMultipleCities: boolean;
+  title: string;
+}) {
+  const relatedBusinesses = await getRelatedBusinesses(
+    siteId,
+    businessId,
+    categorySlug,
+    businessCity,
+    6
+  );
+
+  return (
+    <RelatedBusinessesSection
+      businesses={relatedBusinesses}
+      basePath={basePath}
+      hasMultipleCategories={hasMultipleCategories}
+      hasMultipleCities={hasMultipleCities}
+      title={title}
+    />
+  );
+}
+
+// Skeleton components
+function ReviewsSkeleton() {
+  return (
+    <section className="rounded-lg border border-border bg-card p-6">
+      <h2 className="text-xl font-semibold mb-4">Reviews</h2>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    </section>
+  );
+}
+
+function RelatedBusinessesSkeleton() {
+  return (
+    <section className="w-full py-12">
+      <h2 className="text-2xl font-bold tracking-tight mb-6">
+        Similar Businesses
+      </h2>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    </section>
   );
 }

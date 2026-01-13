@@ -12,6 +12,8 @@ import type {
   BusinessCardData,
   MapBusinessData,
   MapBounds,
+  BusinessDetailData,
+  BusinessReviewData,
 } from '@/lib/types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
@@ -159,6 +161,18 @@ export const getTopBusinesses = cache(
       process.env.SUPABASE_SECRET_KEY!
     );
 
+    // Get site's category slugs first
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug)')
+      .eq('site_id', siteId);
+
+    const siteCategorySlugs = new Set(
+      (siteCategories || [])
+        .map((sc) => sc.category?.slug)
+        .filter((s): s is string => s !== null)
+    );
+
     // Fetch all site businesses with their details
     const { data } = await supabase
       .from('site_businesses')
@@ -194,11 +208,14 @@ export const getTopBusinesses = cache(
         // Skip businesses without ratings
         if (!reviewSource?.rating) return null;
 
-        const categoryJoin = business.business_categories?.[0];
-        const category = categoryJoin?.category
+        // Find the first category that belongs to this site
+        const matchingCategoryJoin = business.business_categories?.find(
+          (bc) => bc.category && siteCategorySlugs.has(bc.category.slug)
+        );
+        const category = matchingCategoryJoin?.category
           ? {
-              slug: categoryJoin.category.slug,
-              name: categoryJoin.category.name,
+              slug: matchingCategoryJoin.category.slug,
+              name: matchingCategoryJoin.category.name,
             }
           : null;
 
@@ -440,6 +457,18 @@ export const getBusinessesByCity = cache(
 
     const offset = (page - 1) * limit;
 
+    // Get site's category slugs first
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug)')
+      .eq('site_id', siteId);
+
+    const siteCategorySlugs = new Set(
+      (siteCategories || [])
+        .map((sc) => (sc.category as { slug: string } | null)?.slug)
+        .filter((s): s is string => s !== null)
+    );
+
     // Get total count of businesses in this city
     const { count } = await supabase
       .from('site_businesses')
@@ -488,11 +517,15 @@ export const getBusinessesByCity = cache(
         if (!business) return null;
 
         const reviewSource = business.business_review_sources?.[0] ?? null;
-        const categoryJoin = business.business_categories?.[0];
-        const category = categoryJoin?.category
+
+        // Find the first category that belongs to this site
+        const matchingCategoryJoin = business.business_categories?.find(
+          (bc) => bc.category && siteCategorySlugs.has(bc.category.slug)
+        );
+        const category = matchingCategoryJoin?.category
           ? {
-              slug: categoryJoin.category.slug,
-              name: categoryJoin.category.name,
+              slug: matchingCategoryJoin.category.slug,
+              name: matchingCategoryJoin.category.name,
             }
           : null;
 
@@ -690,3 +723,221 @@ export async function getBusinessesInBounds(
 
   return businesses;
 }
+
+export const getBusinessDetails = cache(
+  async (
+    siteId: string,
+    businessId: string
+  ): Promise<BusinessDetailData | null> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    // Get site's category slugs first
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug)')
+      .eq('site_id', siteId);
+
+    const siteCategorySlugs = new Set(
+      (siteCategories || [])
+        .map((sc) => (sc.category as { slug: string } | null)?.slug)
+        .filter((s): s is string => s !== null)
+    );
+
+    const { data } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          state,
+          postal_code,
+          street_address,
+          formatted_address,
+          phone,
+          website,
+          description,
+          editorial_summary,
+          main_photo_name,
+          hours,
+          latitude,
+          longitude,
+          business_review_sources(rating, provider, review_count, url),
+          business_categories(category:categories(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .eq('business.id', businessId)
+      .single();
+
+    if (!data?.business) return null;
+
+    const business = data.business;
+
+    // Filter to only categories that belong to this site
+    const categories: CategoryData[] = (business.business_categories || [])
+      .map((bc) => {
+        const cat = bc.category as { slug: string; name: string } | null;
+        return cat && siteCategorySlugs.has(cat.slug)
+          ? { slug: cat.slug, name: cat.name }
+          : null;
+      })
+      .filter((c): c is CategoryData => c !== null);
+
+    const reviewSources = (business.business_review_sources || []).map(
+      (rs) => ({
+        rating: rs.rating,
+        provider: rs.provider,
+        review_count: rs.review_count,
+        url: rs.url,
+      })
+    );
+
+    return {
+      id: business.id,
+      name: business.name,
+      city: business.city,
+      state: business.state,
+      postal_code: business.postal_code,
+      street_address: business.street_address,
+      formatted_address: business.formatted_address,
+      phone: business.phone,
+      website: business.website,
+      description: business.description,
+      editorial_summary: business.editorial_summary,
+      main_photo_name: business.main_photo_name,
+      hours: business.hours,
+      latitude: business.latitude,
+      longitude: business.longitude,
+      is_claimed: data.is_claimed,
+      categories,
+      reviewSources,
+    };
+  }
+);
+
+export const getBusinessReviews = cache(
+  async (businessId: string, limit = 10): Promise<BusinessReviewData[]> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const { data } = await supabase
+      .from('business_reviews')
+      .select('id, author_name, author_image_url, rating, text, time, source')
+      .eq('business_id', businessId)
+      .order('time', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (!data) return [];
+
+    return data;
+  }
+);
+
+export const getRelatedBusinesses = cache(
+  async (
+    siteId: string,
+    businessId: string,
+    categorySlug: string | null,
+    cityName: string | null,
+    limit = 6
+  ): Promise<BusinessCardData[]> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    // Get site's category slugs first
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug)')
+      .eq('site_id', siteId);
+
+    const siteCategorySlugs = new Set(
+      (siteCategories || [])
+        .map((sc) => (sc.category as { slug: string } | null)?.slug)
+        .filter((s): s is string => s !== null)
+    );
+
+    let query = supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          editorial_summary,
+          main_photo_name,
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
+          business_categories(category:categories(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .neq('business.id', businessId);
+
+    if (categorySlug) {
+      query = query.eq(
+        'business.business_categories.category.slug',
+        categorySlug
+      );
+    }
+
+    if (cityName) {
+      query = query.ilike('business.city', cityName);
+    }
+
+    const { data } = await query.limit(limit);
+
+    if (!data) return [];
+
+    const businesses: BusinessCardData[] = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+
+        // Find the first category that belongs to this site
+        const matchingCategoryJoin = business.business_categories?.find(
+          (bc) => bc.category && siteCategorySlugs.has(bc.category.slug)
+        );
+        const category = matchingCategoryJoin?.category
+          ? {
+              slug: matchingCategoryJoin.category.slug,
+              name: matchingCategoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          editorial_summary: business.editorial_summary,
+          main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
+          is_claimed: sb.is_claimed,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    return businesses;
+  }
+);

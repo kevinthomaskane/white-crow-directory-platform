@@ -85,6 +85,7 @@ export default async function CatchAllPage({
       return (
         <DirectoryBusinessPage
           site={site}
+          ctx={ctx}
           category={route.category}
           city={route.city}
           businessId={route.businessId}
