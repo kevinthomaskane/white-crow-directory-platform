@@ -11,11 +11,7 @@ interface DirectoryBasePageProps {
   stats?: SiteStats;
 }
 
-export function DirectoryBasePage({
-  site,
-  ctx,
-  stats,
-}: DirectoryBasePageProps) {
+export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
   const basePath = site.vertical?.slug ?? '';
   const categoryTerm = site.vertical?.term_categories ?? 'Categories';
   const businessTerm =
@@ -26,31 +22,33 @@ export function DirectoryBasePage({
   const hasMultipleCategories = ctx.categoryList.length > 1;
 
   return (
-    <div className="py-16">
+    <div>
       {/* Header */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Browse {businessTerm.charAt(0).toUpperCase() + businessTerm.slice(1)}
-        </h1>
-        <p className="text-muted-foreground mb-6">
-          {hasMultipleCategories && hasMultipleCities
-            ? `Search by ${categoryTerm.toLowerCase()} or location to find the right ${businessTermSingular.toLowerCase()} for you.`
-            : hasMultipleCategories
-              ? `Browse by ${categoryTerm.toLowerCase()} to find the right ${businessTermSingular.toLowerCase()} for you.`
-              : hasMultipleCities
-                ? `Browse by location to find ${businessTerm} near you.`
-                : `Find the best ${businessTerm} in our directory.`}
-        </p>
+      <div className="bg-muted/30 py-16 px-4 sm:px-6 lg:px-8 mb-8 text-center">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Browse{' '}
+            {businessTerm.charAt(0).toUpperCase() + businessTerm.slice(1)}
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            {hasMultipleCategories && hasMultipleCities
+              ? `Search by ${categoryTerm.toLowerCase()} or location to find the right ${businessTermSingular.toLowerCase()} for you.`
+              : hasMultipleCategories
+                ? `Browse by ${categoryTerm.toLowerCase()} to find the right ${businessTermSingular.toLowerCase()} for you.`
+                : hasMultipleCities
+                  ? `Browse by location to find ${businessTerm} near you.`
+                  : `Find the best ${businessTerm} in our directory.`}
+          </p>
 
-        {/* Search Form */}
-        <SearchForm
-          basePath={basePath}
-          categories={ctx.categoryList}
-          cities={ctx.cityList}
-          className="max-w-3xl"
-        />
+          {/* Search Form */}
+          <SearchForm
+            basePath={basePath}
+            categories={ctx.categoryList}
+            cities={ctx.cityList}
+            className="max-w-3xl mx-auto"
+          />
+        </div>
       </div>
-
       <TopBusinessesSection
         siteId={site.id}
         basePath={basePath}
@@ -67,6 +65,8 @@ export function DirectoryBasePage({
           basePath={basePath}
           title={`Browse by ${categoryTerm}`}
           description={`Find ${businessTerm} by specialty`}
+          limit={999}
+          showViewAll={false}
         />
       )}
 
@@ -77,7 +77,7 @@ export function DirectoryBasePage({
           basePath={basePath}
           title="Browse by Location"
           description={`Find ${businessTerm} in your city`}
-          totalCities={ctx.cityList.length}
+          limit={999}
         />
       )}
 

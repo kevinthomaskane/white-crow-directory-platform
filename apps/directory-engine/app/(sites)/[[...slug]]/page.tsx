@@ -16,9 +16,13 @@ import {
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function CatchAllPage({ params }: PageProps) {
+export default async function CatchAllPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug = [] } = await params;
 
   const site = await getSiteConfig();
@@ -39,16 +43,43 @@ export default async function CatchAllPage({ params }: PageProps) {
       return <DirectoryBasePage ctx={ctx} site={site} />;
 
     case 'directory-category':
-      return <DirectoryCategoryPage site={site} category={route.category} />;
+      const category = ctx.categoryList.find((c) => c.slug === route.category);
+      if (!category) return notFound();
+      const { page } = await searchParams;
+      let initialPage = 1;
+      if (page && typeof page === 'string') {
+        initialPage = parseInt(page);
+      }
+      return (
+        <DirectoryCategoryPage
+          page={initialPage}
+          ctx={ctx}
+          site={site}
+          category={category}
+        />
+      );
 
-    case 'directory-category-city':
+    case 'directory-category-city': {
+      const catCityCategory = ctx.categoryList.find(
+        (c) => c.slug === route.category
+      );
+      const catCityCity = ctx.cityList.find((c) => c.slug === route.city);
+      if (!catCityCategory || !catCityCity) return notFound();
+      const { page: catCityPage } = await searchParams;
+      let initialCatCityPage = 1;
+      if (catCityPage && typeof catCityPage === 'string') {
+        initialCatCityPage = parseInt(catCityPage);
+      }
       return (
         <DirectoryCategoryCityPage
           site={site}
-          category={route.category}
-          city={route.city}
+          ctx={ctx}
+          category={catCityCategory}
+          city={catCityCity}
+          page={initialCatCityPage}
         />
       );
+    }
 
     case 'directory-business':
       return (
@@ -60,8 +91,23 @@ export default async function CatchAllPage({ params }: PageProps) {
         />
       );
 
-    case 'directory-city':
-      return <DirectoryCityPage site={site} city={route.city} />;
+    case 'directory-city': {
+      const cityData = ctx.cityList.find((c) => c.slug === route.city);
+      if (!cityData) return notFound();
+      const { page: cityPage } = await searchParams;
+      let initialCityPage = 1;
+      if (cityPage && typeof cityPage === 'string') {
+        initialCityPage = parseInt(cityPage);
+      }
+      return (
+        <DirectoryCityPage
+          site={site}
+          ctx={ctx}
+          city={cityData}
+          page={initialCityPage}
+        />
+      );
+    }
 
     case 'content-category':
       return <ContentCategoryPage site={site} category={route.category} />;

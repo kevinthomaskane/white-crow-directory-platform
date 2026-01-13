@@ -32,11 +32,11 @@ export function CategoriesSection({
   return (
     <section id="by-category" className={cn('w-full py-16', className)}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
             {description && (
-              <p className="mt-1 text-muted-foreground">{description}</p>
+              <p className="mt-2 text-lg text-muted-foreground">{description}</p>
             )}
           </div>
           {showViewAll && hasMore && (

@@ -43,11 +43,11 @@ async function CitiesContent({
   return (
     <section id="by-location" className={cn('w-full py-16', className)}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
             {description && (
-              <p className="mt-1 text-muted-foreground">{description}</p>
+              <p className="mt-2 text-lg text-muted-foreground">{description}</p>
             )}
           </div>
           {hasMore && (
@@ -95,10 +95,10 @@ function CityCard({ city, href }: CityCardProps) {
 
 function CitiesSkeleton({ title = 'Popular Cities' }: { title?: string }) {
   return (
-    <section className="w-full">
+    <section className="w-full py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
           {Array.from({ length: 12 }).map((_, i) => (

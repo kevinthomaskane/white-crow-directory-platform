@@ -1,6 +1,4 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 import { cn, slugify } from '@/lib/utils';
 import { getTopBusinesses } from '@/lib/data/site';
 import { BusinessCard } from '@/components/sites/business-card';
@@ -42,20 +40,15 @@ async function BusinessesContent({
   return (
     <section className={cn('w-full py-16', className)}>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
             {description && (
-              <p className="mt-1 text-muted-foreground">{description}</p>
+              <p className="mt-2 text-lg text-muted-foreground">
+                {description}
+              </p>
             )}
           </div>
-          <Link
-            href={`/${basePath}`}
-            className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-          >
-            View all
-            <ChevronRight className="h-4 w-4" />
-          </Link>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -101,10 +94,10 @@ function buildBusinessUrl(
 
 function BusinessesSkeleton({ title = 'Top Rated' }: { title?: string }) {
   return (
-    <section className="w-full">
+    <section className="w-full py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
         </div>
         <div className="flex flex-col gap-4">
           {Array.from({ length: 6 }).map((_, i) => (

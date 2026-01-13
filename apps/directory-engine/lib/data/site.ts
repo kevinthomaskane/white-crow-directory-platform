@@ -324,6 +324,304 @@ export const getInitialMapData = cache(
   }
 );
 
+export interface PaginatedBusinesses {
+  businesses: BusinessCardData[];
+  total: number;
+  hasMore: boolean;
+}
+
+export const getBusinessesByCategory = cache(
+  async (
+    siteId: string,
+    categorySlug: string,
+    page = 1,
+    limit = 12
+  ): Promise<PaginatedBusinesses> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const { count } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        business:businesses!inner(
+          business_categories!inner(category:categories!inner(slug))
+        )
+      `,
+        { count: 'exact', head: true }
+      )
+      .eq('site_id', siteId)
+      .eq('business.business_categories.category.slug', categorySlug);
+
+    // Fetch businesses with pagination
+    const { data } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          editorial_summary,
+          main_photo_name,
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
+          business_categories!inner(category:categories!inner(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .eq('business.business_categories.category.slug', categorySlug)
+      .range(offset, offset + limit - 1);
+
+    if (!data) {
+      return { businesses: [], total: 0, hasMore: false };
+    }
+
+    const businesses: BusinessCardData[] = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+        const categoryJoin = business.business_categories?.[0];
+        const category = categoryJoin?.category
+          ? {
+              slug: categoryJoin.category.slug,
+              name: categoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          editorial_summary: business.editorial_summary,
+          main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
+          is_claimed: sb.is_claimed,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    const total = count ?? 0;
+
+    return {
+      businesses,
+      total,
+      hasMore: offset + businesses.length < total,
+    };
+  }
+);
+
+export const getBusinessesByCity = cache(
+  async (
+    siteId: string,
+    citySlug: string,
+    page = 1,
+    limit = 12
+  ): Promise<PaginatedBusinesses> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const offset = (page - 1) * limit;
+
+    // Get total count of businesses in this city
+    const { count } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        business:businesses!inner(
+          city
+        )
+      `,
+        { count: 'exact', head: true }
+      )
+      .eq('site_id', siteId)
+      .ilike('business.city', citySlug.replace(/-/g, ' '));
+
+    // Fetch businesses with pagination
+    const { data } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          editorial_summary,
+          main_photo_name,
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
+          business_categories(category:categories(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .ilike('business.city', citySlug.replace(/-/g, ' '))
+      .range(offset, offset + limit - 1);
+
+    if (!data) {
+      return { businesses: [], total: 0, hasMore: false };
+    }
+
+    const businesses: BusinessCardData[] = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+        const categoryJoin = business.business_categories?.[0];
+        const category = categoryJoin?.category
+          ? {
+              slug: categoryJoin.category.slug,
+              name: categoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          editorial_summary: business.editorial_summary,
+          main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
+          is_claimed: sb.is_claimed,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    const total = count ?? 0;
+
+    return {
+      businesses,
+      total,
+      hasMore: offset + businesses.length < total,
+    };
+  }
+);
+
+export const getBusinessesByCategoryAndCity = cache(
+  async (
+    siteId: string,
+    categorySlug: string,
+    citySlug: string,
+    page = 1,
+    limit = 12
+  ): Promise<PaginatedBusinesses> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const { count } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        business:businesses!inner(
+          city,
+          business_categories!inner(category:categories!inner(slug))
+        )
+      `,
+        { count: 'exact', head: true }
+      )
+      .eq('site_id', siteId)
+      .eq('business.business_categories.category.slug', categorySlug)
+      .ilike('business.city', citySlug.replace(/-/g, ' '));
+
+    // Fetch businesses with pagination
+    const { data } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          editorial_summary,
+          main_photo_name,
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
+          business_categories!inner(category:categories!inner(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .eq('business.business_categories.category.slug', categorySlug)
+      .ilike('business.city', citySlug.replace(/-/g, ' '))
+      .range(offset, offset + limit - 1);
+
+    if (!data) {
+      return { businesses: [], total: 0, hasMore: false };
+    }
+
+    const businesses: BusinessCardData[] = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+        const categoryJoin = business.business_categories?.[0];
+        const category = categoryJoin?.category
+          ? {
+              slug: categoryJoin.category.slug,
+              name: categoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          editorial_summary: business.editorial_summary,
+          main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
+          is_claimed: sb.is_claimed,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    const total = count ?? 0;
+
+    return {
+      businesses,
+      total,
+      hasMore: offset + businesses.length < total,
+    };
+  }
+);
+
 export async function getBusinessesInBounds(
   siteId: string,
   bounds: MapBounds,
