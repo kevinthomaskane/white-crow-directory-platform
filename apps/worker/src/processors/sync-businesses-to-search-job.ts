@@ -1,15 +1,37 @@
 import {
   type SyncBusinessesToSearchJobMeta,
+  type Database,
   createTypesenseClient,
   BUSINESSES_COLLECTION,
   businessesSchema,
   type BusinessDocument,
 } from '@white-crow/shared';
+
+type Business = Database['public']['Tables']['businesses']['Row'];
+type SiteBusinessRow = {
+  business_id: string;
+  business: Pick<
+    Business,
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'editorial_summary'
+    | 'formatted_address'
+    | 'city'
+    | 'state'
+    | 'phone'
+    | 'website'
+    | 'latitude'
+    | 'longitude'
+  > | null;
+};
 import { supabase } from '../lib/supabase/client';
 import type { SyncBusinessesToSearchJob } from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
 
 const BATCH_SIZE = 100;
+const PAGE_SIZE = 1000;
+const QUERY_BATCH_SIZE = 200;
 
 export async function handleSyncBusinessesToSearchJob(
   job: SyncBusinessesToSearchJob
@@ -41,33 +63,49 @@ export async function handleSyncBusinessesToSearchJob(
   }
 
   // Get businesses for this site with their categories
-  const { data: siteBusinesses, error: bizError } = await supabase
-    .from('site_businesses')
-    .select(
-      `
-      business_id,
-      business:businesses(
-        id,
-        name,
-        description,
-        editorial_summary,
-        formatted_address,
-        city,
-        state,
-        phone,
-        website,
-        latitude,
-        longitude
-      )
-    `
-    )
-    .eq('site_id', siteId);
+  // Paginate to handle large result sets
+  const siteBusinesses: SiteBusinessRow[] = [];
+  let page = 0;
+  let hasMore = true;
 
-  if (bizError) {
-    throw new Error(`Failed to fetch site businesses: ${bizError.message}`);
+  while (hasMore) {
+    const { data, error: bizError } = await supabase
+      .from('site_businesses')
+      .select(
+        `
+        business_id,
+        business:businesses(
+          id,
+          name,
+          description,
+          editorial_summary,
+          formatted_address,
+          city,
+          state,
+          phone,
+          website,
+          latitude,
+          longitude
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (bizError) {
+      throw new Error(`Failed to fetch site businesses: ${bizError.message}`);
+    }
+
+    if (data && data.length > 0) {
+      siteBusinesses.push(...data);
+      hasMore = data.length === PAGE_SIZE;
+      page++;
+    } else {
+      hasMore = false;
+    }
   }
 
-  if (!siteBusinesses || siteBusinesses.length === 0) {
+  if (siteBusinesses.length === 0) {
     console.log(`[Job ${job.id}] No businesses found for site`);
     await markJobCompleted(job.id, 'No businesses to sync');
     return;
@@ -94,24 +132,41 @@ export async function handleSyncBusinessesToSearchJob(
   );
 
   // Get categories for these businesses
-  const { data: businessCategories, error: catError } = await supabase
-    .from('business_categories')
-    .select(
-      `
-      business_id,
-      category:categories(id, name)
-    `
-    )
-    .in('business_id', businessIds);
+  // Batch queries to avoid URL length limits
+  type BusinessCategoryRow = {
+    business_id: string;
+    category: { id: string; name: string } | null;
+  };
+  const allBusinessCategories: BusinessCategoryRow[] = [];
 
-  if (catError) {
-    throw new Error(`Failed to fetch business categories: ${catError.message}`);
+  for (let i = 0; i < businessIds.length; i += QUERY_BATCH_SIZE) {
+    const batchIds = businessIds.slice(i, i + QUERY_BATCH_SIZE);
+
+    const { data: businessCategories, error: catError } = await supabase
+      .from('business_categories')
+      .select(
+        `
+        business_id,
+        category:categories(id, name)
+      `
+      )
+      .in('business_id', batchIds);
+
+    if (catError) {
+      throw new Error(
+        `Failed to fetch business categories: ${catError.message}`
+      );
+    }
+
+    if (businessCategories) {
+      allBusinessCategories.push(...businessCategories);
+    }
   }
 
   // Build category lookup (filtered by site's categories)
   const categoryMap = new Map<string, { ids: string[]; names: string[] }>();
-  for (const bc of businessCategories || []) {
-    const cat = bc.category as { id: string; name: string } | null;
+  for (const bc of allBusinessCategories) {
+    const cat = bc.category;
     if (!cat) continue;
 
     // Only include categories that belong to this site
@@ -124,22 +179,28 @@ export async function handleSyncBusinessesToSearchJob(
   }
 
   // Get all site_ids for each business (for multi-tenant filtering)
-  const { data: allSiteBusinesses, error: allSitesError } = await supabase
-    .from('site_businesses')
-    .select('business_id, site_id')
-    .in('business_id', businessIds);
-
-  if (allSitesError) {
-    throw new Error(
-      `Failed to fetch all site businesses: ${allSitesError.message}`
-    );
-  }
-
+  // Batch queries to avoid URL length limits
   const siteIdsMap = new Map<string, string[]>();
-  for (const sb of allSiteBusinesses || []) {
-    const existing = siteIdsMap.get(sb.business_id) || [];
-    existing.push(sb.site_id);
-    siteIdsMap.set(sb.business_id, existing);
+
+  for (let i = 0; i < businessIds.length; i += QUERY_BATCH_SIZE) {
+    const batchIds = businessIds.slice(i, i + QUERY_BATCH_SIZE);
+
+    const { data: allSiteBusinesses, error: allSitesError } = await supabase
+      .from('site_businesses')
+      .select('business_id, site_id')
+      .in('business_id', batchIds);
+
+    if (allSitesError) {
+      throw new Error(
+        `Failed to fetch all site businesses: ${allSitesError.message}`
+      );
+    }
+
+    for (const sb of allSiteBusinesses || []) {
+      const existing = siteIdsMap.get(sb.business_id) || [];
+      existing.push(sb.site_id);
+      siteIdsMap.set(sb.business_id, existing);
+    }
   }
 
   const meta: SyncBusinessesToSearchJobMeta = {

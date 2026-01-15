@@ -5,7 +5,8 @@ export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type JobType =
   | 'google_places_search'
   | 'associate_site_businesses'
-  | 'sync_businesses_to_search';
+  | 'sync_businesses_to_search'
+  | 'refresh_site_businesses';
 
 export const GooglePlacesSearchJobPayloadSchema = z.object({
   verticalId: z.uuid(),
@@ -49,4 +50,18 @@ export type SyncBusinessesToSearchJobPayload = z.infer<
 export type SyncBusinessesToSearchJobMeta = {
   total_businesses: number;
   synced_businesses: number;
+};
+
+export const RefreshSiteBusinessesJobPayloadSchema = z.object({
+  siteId: z.uuid(),
+});
+
+export type RefreshSiteBusinessesJobPayload = z.infer<
+  typeof RefreshSiteBusinessesJobPayloadSchema
+>;
+
+export type RefreshSiteBusinessesJobMeta = {
+  total_businesses: number;
+  refreshed_businesses: number;
+  failed_business_ids: string[];
 };

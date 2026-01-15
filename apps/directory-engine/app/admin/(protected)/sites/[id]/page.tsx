@@ -11,7 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Globe, MapPin, Layers, Building2 } from 'lucide-react';
 import { SyncSearchButton } from '@/components/admin/sync-search-button';
+import { RefreshBusinessesButton } from '@/components/admin/refresh-businesses-button';
 import { SiteAssetsForm } from '@/components/admin/site-assets-form';
+import { AddSiteCategoriesForm } from '@/components/admin/add-site-categories-form';
+import { AddSiteCitiesForm } from '@/components/admin/add-site-cities-form';
 
 interface SiteDetailPageProps {
   params: Promise<{ id: string }>;
@@ -47,8 +50,12 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
     notFound();
   }
 
+  const vertical = site.vertical as { id: string; name: string; slug: string };
+  const state = site.state as { id: string; name: string; code: string };
   const categories = site.site_categories?.map((sc) => sc.category) || [];
   const cities = site.site_cities?.map((sc) => sc.city) || [];
+  const categoryIds = categories.map((c) => (c as { id: string }).id);
+  const cityIds = cities.map((c) => (c as { id: string }).id);
   const businessCount =
     (site.site_businesses as unknown as { count: number }[])?.[0]?.count || 0;
 
@@ -75,9 +82,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(site.vertical as { name: string })?.name}
-            </div>
+            <div className="text-2xl font-bold">{vertical?.name}</div>
           </CardContent>
         </Card>
 
@@ -87,9 +92,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(site.state as { name: string; code: string })?.name}
-            </div>
+            <div className="text-2xl font-bold">{state?.name}</div>
           </CardContent>
         </Card>
 
@@ -119,10 +122,13 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
           <CardHeader>
             <CardTitle>Categories</CardTitle>
             <CardDescription>
-              Business categories included in this site.
+              Business categories included in this site. Adding new categories
+              will associate existing businesses from the database that match
+              those categories. To fetch new businesses from Google Places, use
+              the Add Businesses page.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {categories.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {categories.map((cat) => (
@@ -139,15 +145,28 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
                 No categories configured.
               </p>
             )}
+            <div className="border-t pt-4">
+              <p className="mb-2 text-sm font-medium">Add Categories</p>
+              <AddSiteCategoriesForm
+                siteId={site.id}
+                verticalId={vertical.id}
+                existingCategoryIds={categoryIds}
+              />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Cities</CardTitle>
-            <CardDescription>Cities covered by this site.</CardDescription>
+            <CardDescription>
+              Cities covered by this site. Adding new cities will associate
+              existing businesses from the database located in those cities. To
+              fetch new businesses from Google Places, use the Add Businesses
+              page.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {cities.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {cities.slice(0, 20).map((city) => (
@@ -169,6 +188,14 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
                 No cities configured.
               </p>
             )}
+            <div className="border-t pt-4">
+              <p className="mb-2 text-sm font-medium">Add Cities</p>
+              <AddSiteCitiesForm
+                siteId={site.id}
+                stateId={state.id}
+                existingCityIds={cityIds}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -185,6 +212,22 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             {businessCount} businesses will be indexed.
           </p>
           <SyncSearchButton siteId={site.id} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Data</CardTitle>
+          <CardDescription>
+            Refresh business data from Google Places to get latest ratings,
+            reviews, hours, and contact info.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {businessCount} businesses will be refreshed.
+          </p>
+          <RefreshBusinessesButton siteId={site.id} businessCount={businessCount} />
         </CardContent>
       </Card>
 

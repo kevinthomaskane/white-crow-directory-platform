@@ -57,17 +57,34 @@ export async function handleAssociateSiteBusinessesJob(
 
   // Find businesses that match both city and category criteria
   // First get business IDs that are in the site's categories
-  const { data: businessCategories, error: bcError } = await supabase
-    .from('business_categories')
-    .select('business_id')
-    .in('category_id', categoryIds);
+  // Paginate to handle large result sets (Supabase default limit is 1000)
+  const PAGE_SIZE = 1000;
+  const allBusinessCategories: { business_id: string }[] = [];
+  let page = 0;
+  let hasMore = true;
 
-  if (bcError) {
-    throw new Error(`Failed to fetch business categories: ${bcError.message}`);
+  while (hasMore) {
+    const { data: businessCategories, error: bcError } = await supabase
+      .from('business_categories')
+      .select('business_id')
+      .in('category_id', categoryIds)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (bcError) {
+      throw new Error(`Failed to fetch business categories: ${bcError.message}`);
+    }
+
+    if (businessCategories && businessCategories.length > 0) {
+      allBusinessCategories.push(...businessCategories);
+      hasMore = businessCategories.length === PAGE_SIZE;
+      page++;
+    } else {
+      hasMore = false;
+    }
   }
 
   const businessIdsInCategories = [
-    ...new Set(businessCategories?.map((bc) => bc.business_id) || []),
+    ...new Set(allBusinessCategories.map((bc) => bc.business_id)),
   ];
 
   console.log(
@@ -81,17 +98,27 @@ export async function handleAssociateSiteBusinessesJob(
   }
 
   // Now filter to only businesses that are also in the site's cities
-  const { data: matchingBusinesses, error: businessesError } = await supabase
-    .from('businesses')
-    .select('id')
-    .in('id', businessIdsInCategories)
-    .in('city_id', cityIds);
+  // Query in batches to avoid URL length limits with large ID arrays
+  const QUERY_BATCH_SIZE = 200;
+  const businessIds: string[] = [];
 
-  if (businessesError) {
-    throw new Error(`Failed to fetch matching businesses: ${businessesError.message}`);
+  for (let i = 0; i < businessIdsInCategories.length; i += QUERY_BATCH_SIZE) {
+    const batchIds = businessIdsInCategories.slice(i, i + QUERY_BATCH_SIZE);
+
+    const { data: matchingBusinesses, error: businessesError } = await supabase
+      .from('businesses')
+      .select('id')
+      .in('id', batchIds)
+      .in('city_id', cityIds);
+
+    if (businessesError) {
+      throw new Error(`Failed to fetch matching businesses: ${businessesError.message}`);
+    }
+
+    if (matchingBusinesses) {
+      businessIds.push(...matchingBusinesses.map((b) => b.id));
+    }
   }
-
-  const businessIds = matchingBusinesses?.map((b) => b.id) || [];
   console.log(
     `[Job ${job.id}] Found ${businessIds.length} businesses matching both city and category criteria`
   );

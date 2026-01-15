@@ -86,6 +86,7 @@ const placeDetailsFieldMask = [
   'rating',
   'reviews',
   'googleMapsUri',
+  'userRatingCount',
 ];
 
 const MAX_RETRIES = 2;
@@ -301,7 +302,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
               business_id: businessData.id,
               provider: source,
               rating: placeDetails.rating,
-              review_count: placeDetails.reviews?.length || 0,
+              review_count: placeDetails.userRatingCount || 0,
               url: placeDetails.googleMapsUri || null,
               last_synced_at: new Date().toISOString(),
             },
