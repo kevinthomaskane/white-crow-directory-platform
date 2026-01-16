@@ -124,12 +124,15 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     throw new Error('GOOGLE_PLACES_API_KEY env var is required');
   }
 
-  const { queryText, categoryId } = job.payload;
+  const { queryText, categoryId, siteId } = job.payload;
   const lookupCityId = createCityLookupCache();
 
   console.log(`[Job ${job.id}] Starting Google Places search job`);
   console.log(`[Job ${job.id}] Query: "${queryText}"`);
   console.log(`[Job ${job.id}] Category ID: ${categoryId}`);
+  if (siteId) {
+    console.log(`[Job ${job.id}] Site ID: ${siteId}`);
+  }
 
   const places = await runSearchQueries({
     apiKey: PLACES_API_KEY,
@@ -263,6 +266,30 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     console.log(
       `[Job ${job.id}] ✅ Associated category ${categoryId} with business "${businessName}"`
     );
+
+    // Associate business with site if siteId is provided
+    if (siteId) {
+      const { error: siteBusinessError } = await supabase
+        .from('site_businesses')
+        .upsert(
+          {
+            site_id: siteId,
+            business_id: businessData.id,
+          },
+          { onConflict: 'site_id,business_id' }
+        );
+
+      if (siteBusinessError) {
+        console.error(
+          `[Job ${job.id}] Failed to associate business "${businessName}" with site ${siteId}:`,
+          siteBusinessError
+        );
+      } else {
+        console.log(
+          `[Job ${job.id}] ✅ Associated business "${businessName}" with site ${siteId}`
+        );
+      }
+    }
 
     if (placeDetails.reviews?.length > 0) {
       const source: ReviewSource = 'google_places';

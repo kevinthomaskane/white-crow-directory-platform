@@ -101,9 +101,12 @@ export function AddSiteCategoriesForm({
       });
 
       if (result.ok) {
+        const searchMsg = result.data.searchJobsCreated
+          ? `${result.data.searchJobsCreated} search jobs queued.`
+          : '';
         setMessage({
           type: 'success',
-          text: `Added ${result.data.addedCount} categories. ${result.data.jobCreated ? 'Business association job queued.' : ''}`,
+          text: `Added ${result.data.addedCount} categories. ${searchMsg}`,
         });
         setSelectedIds([]);
         setTimeout(() => {

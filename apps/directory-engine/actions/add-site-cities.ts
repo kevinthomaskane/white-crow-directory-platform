@@ -3,8 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse } from '@/lib/types';
 import type {
-  AssociateSiteBusinessesJobPayload,
+  GooglePlacesSearchJobPayload,
   JobType,
+  JobStatus,
 } from '@white-crow/shared';
 
 type AddSiteCitiesPayload = {
@@ -14,7 +15,7 @@ type AddSiteCitiesPayload = {
 
 type AddSiteCitiesResult = {
   addedCount: number;
-  jobCreated: boolean;
+  searchJobsCreated?: number;
 };
 
 export async function addSiteCities(
@@ -50,10 +51,18 @@ export async function addSiteCities(
     };
   }
 
-  // Verify site exists
+  // Fetch site with vertical and state info
   const { data: site, error: siteError } = await supabase
     .from('sites')
-    .select('id')
+    .select(
+      `
+      id,
+      vertical_id,
+      state_id,
+      vertical:verticals(name),
+      state:states(code)
+    `
+    )
     .eq('id', siteId)
     .single();
 
@@ -82,27 +91,69 @@ export async function addSiteCities(
     };
   }
 
-  // Create job to associate businesses with the site (for new cities)
-  const jobPayload: AssociateSiteBusinessesJobPayload = {
-    siteId,
-  };
+  // Queue Google Places search jobs for existing category × new city combinations
+  let searchJobsCreated = 0;
+  const vertical = site.vertical as { name: string } | null;
+  const state = site.state as { code: string } | null;
 
-  const jobType: JobType = 'associate_site_businesses';
-  const { error: jobError } = await supabase.from('jobs').insert({
-    job_type: jobType,
-    payload: jobPayload,
-    status: 'pending',
-  });
+  if (vertical && state) {
+    // Fetch existing categories for the site
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(id, name)')
+      .eq('site_id', siteId);
 
-  if (jobError) {
-    console.error('Error creating associate_site_businesses job:', jobError);
+    // Fetch the new city names
+    const { data: newCities } = await supabase
+      .from('cities')
+      .select('id, name')
+      .in('id', cityIds);
+
+    if (siteCategories && siteCategories.length > 0 && newCities && newCities.length > 0) {
+      const categories = siteCategories
+        .map((sc) => sc.category as { id: string; name: string } | null)
+        .filter((c): c is { id: string; name: string } => c !== null);
+
+      // Build search job payloads
+      const searchPayloads: GooglePlacesSearchJobPayload[] = [];
+      for (const category of categories) {
+        for (const city of newCities) {
+          searchPayloads.push({
+            verticalId: site.vertical_id,
+            categoryId: category.id,
+            queryText: `${category.name} ${vertical.name} ${city.name} ${state.code}`,
+            siteId,
+          });
+        }
+      }
+
+      if (searchPayloads.length > 0) {
+        const runId = crypto.randomUUID();
+        const searchJobs = searchPayloads.map((payload) => ({
+          job_type: 'google_places_search' as JobType,
+          payload,
+          run_id: runId,
+          status: 'pending' as JobStatus,
+        }));
+
+        const { error: searchJobsError } = await supabase
+          .from('jobs')
+          .insert(searchJobs);
+
+        if (searchJobsError) {
+          console.error('Error creating google_places_search jobs:', searchJobsError);
+        } else {
+          searchJobsCreated = searchPayloads.length;
+        }
+      }
+    }
   }
 
   return {
     ok: true,
     data: {
       addedCount: cityIds.length,
-      jobCreated: !jobError,
+      searchJobsCreated,
     },
   };
 }

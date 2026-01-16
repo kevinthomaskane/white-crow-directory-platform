@@ -3,8 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse } from '@/lib/types';
 import type {
-  AssociateSiteBusinessesJobPayload,
+  GooglePlacesSearchJobPayload,
   JobType,
+  JobStatus,
 } from '@white-crow/shared';
 
 type CreateSitePayload = {
@@ -19,7 +20,7 @@ type CreateSitePayload = {
 type SiteCreated = {
   id: string;
   name: string;
-  jobCreated?: boolean;
+  searchJobsCreated?: number;
 };
 
 export async function createSite(
@@ -149,25 +150,69 @@ export async function createSite(
     };
   }
 
-  // Create job to associate businesses with the site
-  const jobPayload: AssociateSiteBusinessesJobPayload = {
-    siteId: site.id,
-  };
+  // Fetch entity names to build Google Places search queries
+  const [verticalResult, stateResult, categoriesResult, citiesResult] =
+    await Promise.all([
+      supabase.from('verticals').select('name').eq('id', verticalId).single(),
+      supabase.from('states').select('code').eq('id', stateId).single(),
+      supabase.from('categories').select('id, name').in('id', categoryIds),
+      supabase.from('cities').select('id, name').in('id', cityIds),
+    ]);
 
-  const jobType: JobType = 'associate_site_businesses';
-  const { error: jobError } = await supabase.from('jobs').insert({
-    job_type: jobType,
-    payload: jobPayload,
-    status: 'pending',
-  });
+  let searchJobsCreated = 0;
 
-  if (jobError) {
-    // Log but don't fail - site was created successfully, job can be retried
-    console.error('Error creating associate_site_businesses job:', jobError);
+  if (
+    verticalResult.data &&
+    stateResult.data &&
+    categoriesResult.data &&
+    citiesResult.data
+  ) {
+    const verticalName = verticalResult.data.name;
+    const stateCode = stateResult.data.code;
+    const categories = categoriesResult.data;
+    const cities = citiesResult.data;
+
+    // Build search job payloads for each category × city combination
+    const searchPayloads: GooglePlacesSearchJobPayload[] = [];
+    for (const category of categories) {
+      for (const city of cities) {
+        searchPayloads.push({
+          verticalId,
+          categoryId: category.id,
+          queryText: `${category.name} ${verticalName} ${city.name} ${stateCode}`,
+          siteId: site.id,
+        });
+      }
+    }
+
+    if (searchPayloads.length > 0) {
+      const runId = crypto.randomUUID();
+      const searchJobs = searchPayloads.map((payload) => ({
+        job_type: 'google_places_search' as JobType,
+        payload,
+        run_id: runId,
+        status: 'pending' as JobStatus,
+      }));
+
+      const { error: searchJobsError } = await supabase
+        .from('jobs')
+        .insert(searchJobs);
+
+      if (searchJobsError) {
+        console.error('Error creating google_places_search jobs:', searchJobsError);
+      } else {
+        searchJobsCreated = searchPayloads.length;
+      }
+    }
+  } else {
+    console.error('Failed to fetch entity names for search job creation');
   }
 
   return {
     ok: true,
-    data: { ...site, jobCreated: !jobError },
+    data: {
+      ...site,
+      searchJobsCreated,
+    },
   };
 }

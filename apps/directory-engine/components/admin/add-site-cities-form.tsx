@@ -108,9 +108,12 @@ export function AddSiteCitiesForm({
       });
 
       if (result.ok) {
+        const searchMsg = result.data.searchJobsCreated
+          ? `${result.data.searchJobsCreated} search jobs queued.`
+          : '';
         setMessage({
           type: 'success',
-          text: `Added ${result.data.addedCount} cities. ${result.data.jobCreated ? 'Business association job queued.' : ''}`,
+          text: `Added ${result.data.addedCount} cities. ${searchMsg}`,
         });
         setSelectedIds([]);
         setTimeout(() => {

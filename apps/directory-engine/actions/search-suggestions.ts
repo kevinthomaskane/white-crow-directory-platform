@@ -5,7 +5,7 @@ import {
   BUSINESSES_COLLECTION,
   type BusinessDocument,
 } from '@white-crow/shared';
-import { getSiteConfig } from '@/lib/data/site';
+import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 
 export type BusinessSuggestion = {
   id: string;
@@ -34,6 +34,12 @@ export async function getBusinessSuggestions(
   });
 
   try {
+    // Get site categories to filter results
+    const routeContext = await getRouteContext(site);
+    const siteCategoryNameToSlug = new Map(
+      routeContext.categoryList.map((c) => [c.name, c.slug])
+    );
+
     const result = await typesense
       .collections<BusinessDocument>(BUSINESSES_COLLECTION)
       .documents()
@@ -44,15 +50,22 @@ export async function getBusinessSuggestions(
         per_page: 5,
       });
 
-    console.log(JSON.stringify(result, null, 2));
-    return (result.hits || []).map((hit) => ({
-      id: hit.document.business_id,
-      name: hit.document.name,
-      city: hit.document.city,
-      categorySlug: hit.document.category_names[0]
-        ?.toLowerCase()
-        .replace(/\s+/g, '-'),
-    }));
+    return (result.hits || []).map((hit) => {
+      // Find the first category that belongs to this site
+      const matchingCategoryName = hit.document.category_names?.find(
+        (name: string) => siteCategoryNameToSlug.has(name)
+      );
+      const categorySlug = matchingCategoryName
+        ? siteCategoryNameToSlug.get(matchingCategoryName)
+        : undefined;
+
+      return {
+        id: hit.document.business_id,
+        name: hit.document.name,
+        city: hit.document.city,
+        categorySlug,
+      };
+    });
   } catch (err) {
     console.error('Business suggestions error:', err);
     return [];

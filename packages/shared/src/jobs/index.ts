@@ -12,6 +12,7 @@ export const GooglePlacesSearchJobPayloadSchema = z.object({
   verticalId: z.uuid(),
   queryText: z.string().min(1),
   categoryId: z.uuid(),
+  siteId: z.uuid().optional(),
 });
 
 export type GooglePlacesSearchJobPayload = z.infer<

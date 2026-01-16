@@ -114,24 +114,8 @@ export async function handleSyncBusinessesToSearchJob(
   const businessIds = siteBusinesses.map((sb) => sb.business_id);
   console.log(`[Job ${job.id}] Found ${businessIds.length} businesses to sync`);
 
-  // Get site's category IDs first (to filter business categories)
-  const { data: siteCategories, error: siteCatError } = await supabase
-    .from('site_categories')
-    .select('category_id')
-    .eq('site_id', siteId);
-
-  if (siteCatError) {
-    throw new Error(`Failed to fetch site categories: ${siteCatError.message}`);
-  }
-
-  const siteCategoryIds = new Set(
-    (siteCategories || []).map((sc) => sc.category_id)
-  );
-  console.log(
-    `[Job ${job.id}] Site has ${siteCategoryIds.size} categories configured`
-  );
-
-  // Get categories for these businesses
+  // Get categories for these businesses (include ALL categories, not filtered by site)
+  // Filtering by site + category happens at search time using site_ids and category_ids
   // Batch queries to avoid URL length limits
   type BusinessCategoryRow = {
     business_id: string;
@@ -163,14 +147,11 @@ export async function handleSyncBusinessesToSearchJob(
     }
   }
 
-  // Build category lookup (filtered by site's categories)
+  // Build category lookup (include all categories for multi-site support)
   const categoryMap = new Map<string, { ids: string[]; names: string[] }>();
   for (const bc of allBusinessCategories) {
     const cat = bc.category;
     if (!cat) continue;
-
-    // Only include categories that belong to this site
-    if (!siteCategoryIds.has(cat.id)) continue;
 
     const existing = categoryMap.get(bc.business_id) || { ids: [], names: [] };
     existing.ids.push(cat.id);
