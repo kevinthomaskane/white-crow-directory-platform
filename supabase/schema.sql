@@ -102,6 +102,20 @@ $$;
 
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -142,7 +156,8 @@ CREATE TABLE IF NOT EXISTS "public"."business_reviews" (
     "text" "text",
     "time" timestamp with time zone,
     "raw" "jsonb",
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "author_id" "uuid"
 );
 
 
@@ -233,8 +248,11 @@ ALTER TABLE "public"."jobs" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "role" "text" DEFAULT 'admin'::"text" NOT NULL,
-    "display_name" "text" DEFAULT 'user'::"text" NOT NULL
+    "role" "text" DEFAULT 'user'::"text" NOT NULL,
+    "display_name" "text" DEFAULT 'user'::"text" NOT NULL,
+    "email" "text",
+    "stripe_customer_id" "text",
+    "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -247,12 +265,19 @@ CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
     "business_id" "uuid" NOT NULL,
     "site_id" "uuid" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "stripe_customer_id" "text",
     "stripe_subscription_id" "text",
     "stripe_subscription_status" "text",
     "is_claimed" boolean DEFAULT false,
     "claimed_at" timestamp with time zone,
-    "claimed_by" "text"
+    "claimed_by" "uuid",
+    "verification_status" "text" DEFAULT 'unverified'::"text",
+    "verification_email" "text",
+    "verification_token" "text",
+    "verification_token_expires_at" timestamp with time zone,
+    "verified_at" timestamp with time zone,
+    "plan" "text",
+    CONSTRAINT "site_businesses_plan_check" CHECK ((("plan" IS NULL) OR ("plan" = ANY (ARRAY['free'::"text", 'premium'::"text"])))),
+    CONSTRAINT "site_businesses_verification_status_check" CHECK (("verification_status" = ANY (ARRAY['unverified'::"text", 'pending'::"text", 'verified'::"text", 'expired'::"text"])))
 );
 
 
@@ -466,6 +491,11 @@ ALTER TABLE ONLY "public"."business_review_sources"
 
 
 ALTER TABLE ONLY "public"."business_reviews"
+    ADD CONSTRAINT "business_reviews_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "auth"."users"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."business_reviews"
     ADD CONSTRAINT "business_reviews_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
 
@@ -492,6 +522,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 ALTER TABLE ONLY "public"."site_businesses"
     ADD CONSTRAINT "site_businesses_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."site_businesses"
+    ADD CONSTRAINT "site_businesses_claimed_by_fkey" FOREIGN KEY ("claimed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -530,59 +565,59 @@ ALTER TABLE ONLY "public"."sites"
 
 
 
-CREATE POLICY "authenticated users can read profiles" ON "public"."profiles" FOR SELECT USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to business_categories" ON "public"."business_categories" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."business_categories" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to business_review_sources" ON "public"."business_review_sources" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."business_review_sources" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to business_reviews" ON "public"."business_reviews" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."business_reviews" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to businesses" ON "public"."businesses" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."businesses" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to categories" ON "public"."categories" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."categories" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to cities" ON "public"."cities" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."cities" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to jobs" ON "public"."jobs" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."jobs" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to profiles" ON "public"."profiles" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."site_businesses" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to site_businesses" ON "public"."site_businesses" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."site_categories" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to site_categories" ON "public"."site_categories" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."site_cities" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to site_cities" ON "public"."site_cities" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."sites" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to sites" ON "public"."sites" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."states" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to states" ON "public"."states" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
-CREATE POLICY "authenticated users have full access" ON "public"."verticals" USING ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text")) WITH CHECK ((( SELECT "auth"."role"() AS "role") = 'authenticated'::"text"));
+CREATE POLICY "admins have full access to verticals" ON "public"."verticals" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
@@ -623,6 +658,62 @@ ALTER TABLE "public"."sites" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."states" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "users can delete categories for claimed businesses" ON "public"."business_categories" FOR DELETE USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "business_categories"."business_id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "users can delete own reviews" ON "public"."business_reviews" FOR DELETE USING (("author_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "users can insert categories for claimed businesses" ON "public"."business_categories" FOR INSERT WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "business_categories"."business_id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "users can insert own reviews" ON "public"."business_reviews" FOR INSERT WITH CHECK (("author_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "users can read all reviews" ON "public"."business_reviews" FOR SELECT USING (("auth"."role"() = 'authenticated'::"text"));
+
+
+
+CREATE POLICY "users can read categories for claimed businesses" ON "public"."business_categories" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "business_categories"."business_id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "users can read own claimed businesses" ON "public"."businesses" FOR SELECT USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "businesses"."id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "users can read own claimed businesses" ON "public"."site_businesses" FOR SELECT USING (("claimed_by" = "auth"."uid"()));
+
+
+
+CREATE POLICY "users can read own profile" ON "public"."profiles" FOR SELECT USING (("id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "users can update own claimed businesses" ON "public"."businesses" FOR UPDATE USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "businesses"."id") AND ("site_businesses"."claimed_by" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses"
+  WHERE (("site_businesses"."business_id" = "businesses"."id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "users can update own reviews" ON "public"."business_reviews" FOR UPDATE USING (("author_id" = "auth"."uid"())) WITH CHECK (("author_id" = "auth"."uid"()));
+
 
 
 ALTER TABLE "public"."verticals" ENABLE ROW LEVEL SECURITY;
@@ -803,6 +894,12 @@ GRANT ALL ON FUNCTION "public"."claim_next_job"("p_worker_id" "text") TO "servic
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
 
 
 

@@ -7,22 +7,9 @@ export async function proxy(request: NextRequest) {
   const site = process.env.SITE || request.headers.get('host') || '';
   console.log('Incoming request for site:', site);
 
-  // Non-admin routes: just set x-site header, no session handling needed
-  if (site !== ADMIN_DOMAIN) {
-    // Block access to /admin routes on non-admin sites
-    if (request.nextUrl.pathname.startsWith('/admin')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/__not-found';
-      return NextResponse.rewrite(url);
-    }
-    const response = NextResponse.next();
-    response.headers.set('x-site', site);
-    return response;
-  }
-
-  // Admin routes: handle Supabase session
   let response = NextResponse.next({ request });
 
+  // Create Supabase client for session handling on all routes
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -40,9 +27,22 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // Refresh session if expired
   await supabase.auth.getUser();
 
-  // Rewrite root to /admin
+  // Non-admin sites
+  if (site !== ADMIN_DOMAIN) {
+    // Block access to /admin routes on non-admin sites
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/__not-found';
+      return NextResponse.rewrite(url);
+    }
+    response.headers.set('x-site', site);
+    return response;
+  }
+
+  // Admin site: rewrite root to /admin
   if (request.nextUrl.pathname === '/') {
     const url = request.nextUrl.clone();
     url.pathname = '/admin';

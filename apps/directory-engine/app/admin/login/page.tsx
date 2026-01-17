@@ -2,16 +2,30 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { LoginForm } from '@/components/admin/login-form';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // If already logged in, redirect to dashboard
+  // If already logged in and is admin, redirect to dashboard
   if (user) {
-    redirect('/admin');
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role === 'admin') {
+      redirect('/admin');
+    }
   }
+
+  const { error } = await searchParams;
 
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -22,6 +36,11 @@ export default async function LoginPage() {
             Sign in to access the dashboard
           </p>
         </div>
+        {error === 'unauthorized' && (
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            You do not have permission to access the admin dashboard.
+          </div>
+        )}
         <LoginForm />
       </div>
     </div>

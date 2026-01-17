@@ -15,6 +15,7 @@ import { RefreshBusinessesButton } from '@/components/admin/refresh-businesses-b
 import { SiteAssetsForm } from '@/components/admin/site-assets-form';
 import { AddSiteCategoriesForm } from '@/components/admin/add-site-categories-form';
 import { AddSiteCitiesForm } from '@/components/admin/add-site-cities-form';
+import { SyncBusinessesToSearchJobMeta } from '@white-crow/shared';
 
 interface SiteDetailPageProps {
   params: Promise<{ id: string }>;
@@ -58,6 +59,21 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
   const cityIds = cities.map((c) => (c as { id: string }).id);
   const businessCount =
     (site.site_businesses as unknown as { count: number }[])?.[0]?.count || 0;
+
+  // Get the last sync job for this site
+  const { data: lastSyncJob } = await supabase
+    .from('jobs')
+    .select('id, status, progress, meta, error, finished_at, created_at')
+    .eq('job_type', 'sync_businesses_to_search')
+    .eq('payload->>siteId', id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  const searchIndexIsSynced =
+    lastSyncJob?.status === 'completed' &&
+    (lastSyncJob?.meta as SyncBusinessesToSearchJobMeta).synced_businesses ===
+      businessCount;
 
   return (
     <div className="space-y-8">
@@ -207,11 +223,58 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             Sync businesses to the search index for instant search results.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {businessCount} businesses will be indexed.
-          </p>
-          <SyncSearchButton siteId={site.id} />
+        <CardContent className="space-y-4">
+          {lastSyncJob ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                    lastSyncJob.status === 'completed'
+                      ? 'bg-green-100 text-green-700'
+                      : lastSyncJob.status === 'failed'
+                        ? 'bg-red-100 text-red-700'
+                        : lastSyncJob.status === 'processing'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                  }`}
+                >
+                  {lastSyncJob.status}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {lastSyncJob.finished_at
+                    ? `Finished ${new Date(lastSyncJob.finished_at).toLocaleDateString()} at ${new Date(lastSyncJob.finished_at).toLocaleTimeString()}`
+                    : `Started ${new Date(lastSyncJob.created_at).toLocaleDateString()} at ${new Date(lastSyncJob.created_at).toLocaleTimeString()}`}
+                </span>
+              </div>
+              {lastSyncJob.status === 'completed' && lastSyncJob.meta && (
+                <p className="text-sm text-muted-foreground">
+                  {(lastSyncJob.meta as SyncBusinessesToSearchJobMeta)
+                    .synced_businesses ?? 0}{' '}
+                  businesses indexed
+                </p>
+              )}
+              {lastSyncJob.status === 'failed' && lastSyncJob.error && (
+                <p className="text-sm text-red-600">{lastSyncJob.error}</p>
+              )}
+              {lastSyncJob.status === 'processing' && (
+                <p className="text-sm text-muted-foreground">
+                  Progress: {lastSyncJob.progress}%
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No previous sync. {businessCount} businesses will be indexed.
+            </p>
+          )}
+          <div className="flex items-center justify-between border-t pt-4">
+            <p className="text-sm text-muted-foreground">
+              {searchIndexIsSynced
+                ? `Resync ${businessCount} businesses.`
+                : `Index ${businessCount} businesses.`}
+            </p>
+            <SyncSearchButton siteId={site.id} />
+          </div>
         </CardContent>
       </Card>
 
@@ -227,7 +290,10 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
           <p className="text-sm text-muted-foreground">
             {businessCount} businesses will be refreshed.
           </p>
-          <RefreshBusinessesButton siteId={site.id} businessCount={businessCount} />
+          <RefreshBusinessesButton
+            siteId={site.id}
+            businessCount={businessCount}
+          />
         </CardContent>
       </Card>
 

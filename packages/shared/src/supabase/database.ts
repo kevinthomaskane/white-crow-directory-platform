@@ -84,6 +84,7 @@ export type Database = {
       }
       business_reviews: {
         Row: {
+          author_id: string | null
           author_image_url: string | null
           author_name: string | null
           author_url: string | null
@@ -98,6 +99,7 @@ export type Database = {
           time: string | null
         }
         Insert: {
+          author_id?: string | null
           author_image_url?: string | null
           author_name?: string | null
           author_url?: string | null
@@ -112,6 +114,7 @@ export type Database = {
           time?: string | null
         }
         Update: {
+          author_id?: string | null
           author_image_url?: string | null
           author_name?: string | null
           author_url?: string | null
@@ -349,20 +352,29 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string
+          email: string | null
           id: string
           role: string
+          stripe_customer_id: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string
+          email?: string | null
           id?: string
           role?: string
+          stripe_customer_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string
+          email?: string | null
           id?: string
           role?: string
+          stripe_customer_id?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -374,11 +386,16 @@ export type Database = {
           created_at: string
           id: string
           is_claimed: boolean | null
+          plan: string | null
           site_id: string
-          stripe_customer_id: string | null
           stripe_subscription_id: string | null
           stripe_subscription_status: string | null
           updated_at: string
+          verification_email: string | null
+          verification_status: string | null
+          verification_token: string | null
+          verification_token_expires_at: string | null
+          verified_at: string | null
         }
         Insert: {
           business_id: string
@@ -387,11 +404,16 @@ export type Database = {
           created_at?: string
           id?: string
           is_claimed?: boolean | null
+          plan?: string | null
           site_id: string
-          stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_subscription_status?: string | null
           updated_at?: string
+          verification_email?: string | null
+          verification_status?: string | null
+          verification_token?: string | null
+          verification_token_expires_at?: string | null
+          verified_at?: string | null
         }
         Update: {
           business_id?: string
@@ -400,11 +422,16 @@ export type Database = {
           created_at?: string
           id?: string
           is_claimed?: boolean | null
+          plan?: string | null
           site_id?: string
-          stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_subscription_status?: string | null
           updated_at?: string
+          verification_email?: string | null
+          verification_status?: string | null
+          verification_token?: string | null
+          verification_token_expires_at?: string | null
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -412,6 +439,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_businesses_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -609,6 +643,7 @@ export type Database = {
           run_id: string
         }[]
       }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

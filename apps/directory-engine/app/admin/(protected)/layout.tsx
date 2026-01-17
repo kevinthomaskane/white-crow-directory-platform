@@ -16,6 +16,17 @@ export default async function ProtectedAdminLayout({
     redirect('/admin/login');
   }
 
+  // Check if user has admin role
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'admin') {
+    redirect('/admin/login?error=unauthorized');
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar user={user} />
