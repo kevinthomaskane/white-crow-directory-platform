@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -33,8 +34,8 @@ interface SignupFormProps {
 }
 
 export function SignupForm({ redirectTo }: SignupFormProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -53,16 +54,10 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
 
       const supabase = createClient();
 
-      // Get the current URL for the email confirmation redirect
-      const emailRedirectTo = redirectTo
-        ? `${window.location.origin}/auth/redirect?next=${encodeURIComponent(redirectTo)}`
-        : `${window.location.origin}/auth/redirect`;
-
       const { error: signUpError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
-          emailRedirectTo,
           data: {
             display_name: values.name,
           },
@@ -70,29 +65,26 @@ export function SignupForm({ redirectTo }: SignupFormProps) {
       });
 
       if (signUpError) {
+        if (
+          signUpError.code === 'email_exists' ||
+          signUpError.code === 'user_already_exists'
+        ) {
+          setError(
+            'An account with this email already exists. Please log in instead.'
+          );
+          return;
+        }
         setError(signUpError.message);
         return;
       }
 
-      setSuccess(true);
+      router.push(redirectTo || '/');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Signup error:', err);
     } finally {
       setIsLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <div className="rounded-lg border border-border bg-muted/50 p-6 text-center">
-        <h3 className="text-lg font-semibold">Check your email</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          We&apos;ve sent you a confirmation link. Please check your email to
-          complete your registration.
-        </p>
-      </div>
-    );
   }
 
   return (

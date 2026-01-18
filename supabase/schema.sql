@@ -91,13 +91,17 @@ ALTER FUNCTION "public"."claim_next_job"("p_worker_id" "text") OWNER TO "postgre
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
-begin
-  insert into public.profiles (id, display_name, role)
-  values (new.id, '', 'admin');
-
-  return new;
-end;
-$$;
+  BEGIN
+    INSERT INTO public.profiles (id, email, display_name, role)
+    VALUES (
+      NEW.id,
+      NEW.email,
+      COALESCE(NEW.raw_user_meta_data->>'display_name', ''),
+      'user'
+    );
+    RETURN NEW;
+  END;
+  $$;
 
 
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
@@ -251,7 +255,6 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "role" "text" DEFAULT 'user'::"text" NOT NULL,
     "display_name" "text" DEFAULT 'user'::"text" NOT NULL,
     "email" "text",
-    "stripe_customer_id" "text",
     "updated_at" timestamp with time zone DEFAULT "now"()
 );
 
@@ -276,6 +279,7 @@ CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
     "verification_token_expires_at" timestamp with time zone,
     "verified_at" timestamp with time zone,
     "plan" "text",
+    "stripe_customer_id" "text",
     CONSTRAINT "site_businesses_plan_check" CHECK ((("plan" IS NULL) OR ("plan" = ANY (ARRAY['free'::"text", 'premium'::"text"])))),
     CONSTRAINT "site_businesses_verification_status_check" CHECK (("verification_status" = ANY (ARRAY['unverified'::"text", 'pending'::"text", 'verified'::"text", 'expired'::"text"])))
 );

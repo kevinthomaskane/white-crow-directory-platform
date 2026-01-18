@@ -355,7 +355,6 @@ export type Database = {
           email: string | null
           id: string
           role: string
-          stripe_customer_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -364,7 +363,6 @@ export type Database = {
           email?: string | null
           id?: string
           role?: string
-          stripe_customer_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -373,7 +371,6 @@ export type Database = {
           email?: string | null
           id?: string
           role?: string
-          stripe_customer_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -388,6 +385,7 @@ export type Database = {
           is_claimed: boolean | null
           plan: string | null
           site_id: string
+          stripe_customer_id: string | null
           stripe_subscription_id: string | null
           stripe_subscription_status: string | null
           updated_at: string
@@ -406,6 +404,7 @@ export type Database = {
           is_claimed?: boolean | null
           plan?: string | null
           site_id: string
+          stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_subscription_status?: string | null
           updated_at?: string
@@ -424,6 +423,7 @@ export type Database = {
           is_claimed?: boolean | null
           plan?: string | null
           site_id?: string
+          stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           stripe_subscription_status?: string | null
           updated_at?: string
