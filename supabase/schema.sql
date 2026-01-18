@@ -88,21 +88,6 @@ $$;
 ALTER FUNCTION "public"."claim_next_job"("p_worker_id" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
-begin
-  insert into public.profiles (id, display_name, role)
-  values (new.id, '', 'admin');
-
-  return new;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
-
-
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -252,7 +237,8 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "display_name" "text" DEFAULT 'user'::"text" NOT NULL,
     "email" "text",
     "stripe_customer_id" "text",
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "site_id" "uuid"
 );
 
 
@@ -415,6 +401,11 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_user_site_unique" UNIQUE ("id", "site_id");
+
+
+
 ALTER TABLE ONLY "public"."site_businesses"
     ADD CONSTRAINT "site_businesses_business_site_unique" UNIQUE ("business_id", "site_id");
 
@@ -517,6 +508,11 @@ ALTER TABLE ONLY "public"."cities"
 
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_site_id_fkey" FOREIGN KEY ("site_id") REFERENCES "public"."sites"("id") ON DELETE CASCADE;
 
 
 
@@ -888,12 +884,6 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 GRANT ALL ON FUNCTION "public"."claim_next_job"("p_worker_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."claim_next_job"("p_worker_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."claim_next_job"("p_worker_id" "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
-GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 

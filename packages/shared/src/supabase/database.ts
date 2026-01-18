@@ -355,6 +355,7 @@ export type Database = {
           email: string | null
           id: string
           role: string
+          site_id: string | null
           stripe_customer_id: string | null
           updated_at: string | null
         }
@@ -364,6 +365,7 @@ export type Database = {
           email?: string | null
           id?: string
           role?: string
+          site_id?: string | null
           stripe_customer_id?: string | null
           updated_at?: string | null
         }
@@ -373,10 +375,19 @@ export type Database = {
           email?: string | null
           id?: string
           role?: string
+          site_id?: string | null
           stripe_customer_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_businesses: {
         Row: {

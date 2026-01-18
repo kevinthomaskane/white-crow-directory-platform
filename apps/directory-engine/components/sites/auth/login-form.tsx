@@ -16,26 +16,23 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
-import { createProfile } from '@/actions/auth';
+import { checkUserProfile } from '@/actions/auth';
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: 'Name must be at least 2 characters.',
-  }),
   email: z.email({
     message: 'Please enter a valid email address.',
   }),
-  password: z.string().min(8, {
-    message: 'Password must be at least 8 characters.',
+  password: z.string().min(1, {
+    message: 'Password is required.',
   }),
 });
 
-interface SignupFormProps {
+interface LoginFormProps {
   siteId: string;
   redirectTo?: string;
 }
 
-export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
+export function LoginForm({ siteId, redirectTo }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +40,6 @@ export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
       email: '',
       password: '',
     },
@@ -54,66 +50,35 @@ export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
       setIsLoading(true);
       setError(null);
 
-      const supabase = createClient();
+      // First check if user has profile for this site
+      const profileCheck = await checkUserProfile(values.email, siteId);
 
-      // Try to sign up new user
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            display_name: values.name,
-          },
-        },
-      });
-
-      if (signUpError) {
-        // Signup failed - try signing in (maybe they already exist)
-        const { data: signInData, error: signInError } =
-          await supabase.auth.signInWithPassword({
-            email: values.email,
-            password: values.password,
-          });
-
-        if (signInError) {
-          setError('Unable to create account with this email.');
-          return;
-        }
-
-        // Sign in worked - create profile for this site
-        const result = await createProfile(
-          signInData.user.id,
-          siteId,
-          values.name,
-          values.email
-        );
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-
-        router.push(redirectTo || '/');
+      if (!profileCheck.ok) {
+        setError(profileCheck.error);
         return;
       }
 
-      // New user created - create profile
-      if (data.user) {
-        const result = await createProfile(
-          data.user.id,
-          siteId,
-          values.name,
-          values.email
-        );
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
+      if (!profileCheck.data.exists) {
+        setError('No account found. Please sign up.');
+        return; // DO NOT call signIn - prevents setting cookies
+      }
+
+      // Profile exists - proceed with sign in
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (signInError) {
+        setError('Invalid email or password.');
+        return;
       }
 
       router.push(redirectTo || '/');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
-      console.error('Signup error:', err);
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -122,25 +87,6 @@ export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input
-                  type="text"
-                  placeholder="Enter your name"
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <FormField
           control={form.control}
           name="email"
@@ -169,7 +115,7 @@ export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="Create a password"
+                  placeholder="Enter your password"
                   disabled={isLoading}
                   {...field}
                 />
@@ -184,7 +130,7 @@ export function SignupForm({ siteId, redirectTo }: SignupFormProps) {
           className="w-full cursor-pointer"
           disabled={isLoading}
         >
-          {isLoading ? 'Creating account...' : 'Create Account'}
+          {isLoading ? 'Signing in...' : 'Sign In'}
         </Button>
 
         {error && (

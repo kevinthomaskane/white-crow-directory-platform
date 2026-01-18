@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { SignupForm } from '@/components/sites/auth/signup-form';
+import { LoginForm } from '@/components/sites/auth/login-form';
 import { getSiteConfig } from '@/lib/data/site';
 import { redirect } from 'next/navigation';
 
-export default async function SignupPage() {
+export default async function LoginPage() {
   const siteConfig = await getSiteConfig();
 
   if (!siteConfig) {
@@ -15,17 +15,17 @@ export default async function SignupPage() {
       <div className="w-full max-w-md space-y-6 px-4">
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Create an account
+            Welcome back
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Enter your details below to create your account
+            Enter your credentials to sign in
           </p>
         </div>
-        <SignupForm siteId={siteConfig.id} />
+        <LoginForm siteId={siteConfig.id} />
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="text-primary hover:underline">
+            Sign up
           </Link>
         </p>
       </div>

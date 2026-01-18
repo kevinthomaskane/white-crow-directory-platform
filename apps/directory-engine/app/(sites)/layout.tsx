@@ -1,6 +1,9 @@
 import { SiteHeader, type NavItem } from '@/components/sites/site-header';
 import { SiteFooter } from '@/components/sites/site-footer';
 import { getSiteConfig, getRouteContext } from '@/lib/data/site';
+import { AuthProvider } from '@/components/auth/auth-provider';
+import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@white-crow/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +55,29 @@ export default async function SitesLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+
   const siteConfig = await getSiteConfig();
+
+  // Validate: does this user have a profile for this site?
+  let user = null;
+  if (authUser && siteConfig) {
+    const serviceClient = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('id')
+      .eq('id', authUser.id)
+      .eq('site_id', siteConfig.id)
+      .single();
+
+    user = profile ? authUser : null;
+  }
 
   let navItems: NavItem[] = [];
   let routeContext = null;
@@ -74,19 +99,21 @@ export default async function SitesLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader
-        logo={{ text: siteConfig?.name || 'Directory Site' }}
-        navItems={navItems}
-      />
-      <main>{children}</main>
-      {siteConfig && routeContext && (
-        <SiteFooter
-          siteConfig={siteConfig}
-          routeContext={routeContext}
-          basePath={basePath}
+    <AuthProvider initialUser={user} siteId={siteConfig?.id ?? ''}>
+      <div className="min-h-screen bg-background">
+        <SiteHeader
+          logo={{ text: siteConfig?.name || 'Directory Site' }}
+          navItems={navItems}
         />
-      )}
-    </div>
+        <main>{children}</main>
+        {siteConfig && routeContext && (
+          <SiteFooter
+            siteConfig={siteConfig}
+            routeContext={routeContext}
+            basePath={basePath}
+          />
+        )}
+      </div>
+    </AuthProvider>
   );
 }
