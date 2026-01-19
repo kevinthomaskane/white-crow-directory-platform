@@ -750,6 +750,7 @@ export const getBusinessDetails = cache(
       .from('site_businesses')
       .select(
         `
+        id,
         is_claimed,
         business:businesses!inner(
           id,
@@ -816,6 +817,7 @@ export const getBusinessDetails = cache(
       latitude: business.latitude,
       longitude: business.longitude,
       is_claimed: data.is_claimed,
+      site_business_id: data.id,
       categories,
       reviewSources,
     };

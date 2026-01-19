@@ -1,6 +1,7 @@
 import { SiteHeader, type NavItem } from '@/components/sites/site-header';
 import { SiteFooter } from '@/components/sites/site-footer';
 import { getSiteConfig, getRouteContext } from '@/lib/data/site';
+import { AuthProvider } from '@/contexts/auth-context';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,19 +75,21 @@ export default async function SitesLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader
-        logo={{ text: siteConfig?.name || 'Directory Site' }}
-        navItems={navItems}
-      />
-      <main>{children}</main>
-      {siteConfig && routeContext && (
-        <SiteFooter
-          siteConfig={siteConfig}
-          routeContext={routeContext}
-          basePath={basePath}
+    <AuthProvider>
+      <div className="min-h-screen bg-background">
+        <SiteHeader
+          logo={{ text: siteConfig?.name || 'Directory Site' }}
+          navItems={navItems}
         />
-      )}
-    </div>
+        <main>{children}</main>
+        {siteConfig && routeContext && (
+          <SiteFooter
+            siteConfig={siteConfig}
+            routeContext={routeContext}
+            basePath={basePath}
+          />
+        )}
+      </div>
+    </AuthProvider>
   );
 }

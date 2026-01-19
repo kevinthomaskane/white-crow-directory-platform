@@ -10,9 +10,9 @@ import {
   getRelatedBusinesses,
 } from '@/lib/data/site';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { RatingStars, formatProvider } from '@/components/sites/business-card';
 import { ClaimBusinessBanner } from '@/components/sites/sections/claim-business-banner';
+import { ClaimBusinessButton } from '@/components/sites/claim/claim-business-button';
 import { BusinessReviewsSection } from '@/components/sites/sections/business-reviews-section';
 import { BusinessContactCard } from '@/components/sites/sections/business-contact-card';
 import { RelatedBusinessesSection } from '@/components/sites/sections/related-businesses-section';
@@ -151,7 +151,14 @@ export async function DirectoryBusinessPage({
             {/* Claim CTA - Header */}
             {!business.is_claimed && (
               <div className="flex-shrink-0">
-                <Button size="lg">Claim This {businessTerm}</Button>
+                <ClaimBusinessButton
+                  size="lg"
+                  siteBusinessId={business.site_business_id}
+                  businessName={business.name}
+                  businessWebsite={business.website}
+                >
+                  Claim This {businessTerm}
+                </ClaimBusinessButton>
               </div>
             )}
           </div>
@@ -162,7 +169,14 @@ export async function DirectoryBusinessPage({
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           {/* Claim Banner - Prominent */}
-          {!business.is_claimed && <ClaimBusinessBanner className="mb-8" />}
+          {!business.is_claimed && (
+            <ClaimBusinessBanner
+              className="mb-8"
+              siteBusinessId={business.site_business_id}
+              businessName={business.name}
+              businessWebsite={business.website}
+            />
+          )}
 
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Left Column - Main Content */}
@@ -260,9 +274,16 @@ export async function DirectoryBusinessPage({
                     <p className="text-sm text-muted-foreground mb-3">
                       Is this your business? Claim your listing to manage it.
                     </p>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <ClaimBusinessButton
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      siteBusinessId={business.site_business_id}
+                      businessName={business.name}
+                      businessWebsite={business.website}
+                    >
                       Claim Listing
-                    </Button>
+                    </ClaimBusinessButton>
                   </div>
                 )}
               </div>

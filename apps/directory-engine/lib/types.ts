@@ -170,6 +170,7 @@ export type BusinessDetailData = Pick<
   | 'longitude'
 > &
   Pick<SiteBusiness, 'is_claimed'> & {
+    site_business_id: string;
     categories: CategoryData[];
     reviewSources: Pick<
       BusinessReviewSource,

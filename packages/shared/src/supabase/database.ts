@@ -353,6 +353,7 @@ export type Database = {
           created_at: string
           display_name: string
           email: string | null
+          has_password: boolean
           id: string
           role: string
           updated_at: string | null
@@ -361,6 +362,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           email?: string | null
+          has_password?: boolean
           id?: string
           role?: string
           updated_at?: string | null
@@ -369,6 +371,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           email?: string | null
+          has_password?: boolean
           id?: string
           role?: string
           updated_at?: string | null

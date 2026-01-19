@@ -92,13 +92,8 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
   BEGIN
-    INSERT INTO public.profiles (id, email, display_name, role)
-    VALUES (
-      NEW.id,
-      NEW.email,
-      COALESCE(NEW.raw_user_meta_data->>'display_name', ''),
-      'user'
-    );
+    INSERT INTO public.profiles (id, email, display_name, role, has_password)
+    VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'display_name', ''), 'user', false);
     RETURN NEW;
   END;
   $$;
@@ -255,7 +250,8 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "role" "text" DEFAULT 'user'::"text" NOT NULL,
     "display_name" "text" DEFAULT 'user'::"text" NOT NULL,
     "email" "text",
-    "updated_at" timestamp with time zone DEFAULT "now"()
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "has_password" boolean DEFAULT false NOT NULL
 );
 
 
