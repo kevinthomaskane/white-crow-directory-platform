@@ -78,3 +78,9 @@ Using timestamped filenames (e.g., `hero-1704067200000`) instead of fixed names 
 - **No cache invalidation needed** - new upload = new URL = no stale cache
 - **Rollback capability** - old files remain in storage
 - **CDN-friendly** - immutable URLs cache indefinitely
+
+
+
+### TESTING WITH PICQUET LAW FIRM
+https://www.piquetlawfirm.com/
+business id: 0021f9c6-792b-40f0-b8fe-fc592e8a60ff

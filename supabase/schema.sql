@@ -565,6 +565,18 @@ ALTER TABLE ONLY "public"."sites"
 
 
 
+CREATE POLICY "Enable read access for all users" ON "public"."businesses" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Enable read access for all users" ON "public"."site_businesses" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "id"));
+
+
+
 CREATE POLICY "admins have full access to business_categories" ON "public"."business_categories" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
@@ -687,16 +699,6 @@ CREATE POLICY "users can read all reviews" ON "public"."business_reviews" FOR SE
 CREATE POLICY "users can read categories for claimed businesses" ON "public"."business_categories" FOR SELECT USING ((EXISTS ( SELECT 1
    FROM "public"."site_businesses"
   WHERE (("site_businesses"."business_id" = "business_categories"."business_id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
-
-
-
-CREATE POLICY "users can read own claimed businesses" ON "public"."businesses" FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM "public"."site_businesses"
-  WHERE (("site_businesses"."business_id" = "businesses"."id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
-
-
-
-CREATE POLICY "users can read own claimed businesses" ON "public"."site_businesses" FOR SELECT USING (("claimed_by" = "auth"."uid"()));
 
 
 

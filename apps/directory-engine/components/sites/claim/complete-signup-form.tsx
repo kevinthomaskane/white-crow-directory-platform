@@ -21,6 +21,7 @@ interface CompleteSignupFormProps {
   siteBusinessId: string;
   businessName: string;
   email: string;
+  businessUrl: string;
 }
 
 const formSchema = z
@@ -42,6 +43,7 @@ export function CompleteSignupForm({
   siteBusinessId,
   businessName,
   email,
+  businessUrl,
 }: CompleteSignupFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export function CompleteSignupForm({
       }
 
       // Redirect to the business page
-      router.push(result.data.redirectTo);
+      router.push(businessUrl);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Complete signup error:', err);
@@ -160,11 +162,7 @@ export function CompleteSignupForm({
             )}
           />
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Setting up...' : 'Complete Setup & Claim Business'}
           </Button>
 

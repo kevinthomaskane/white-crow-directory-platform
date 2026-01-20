@@ -37,7 +37,7 @@ interface ClaimBusinessModalProps {
 }
 
 const formSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  email: z.email({ message: 'Please enter a valid email address.' }),
 });
 
 export function ClaimBusinessModal({
@@ -108,6 +108,7 @@ export function ClaimBusinessModal({
           siteBusinessId,
           email: values.email,
           redirectUrl,
+          businessUrl: window.location.pathname,
         });
 
         if (!result.ok) {
@@ -263,9 +264,7 @@ export function ClaimBusinessModal({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Claim {businessName}</DialogTitle>
-            <DialogDescription>
-              Verify you own this business
-            </DialogDescription>
+            <DialogDescription>Verify you own this business</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -366,11 +365,7 @@ export function ClaimBusinessModal({
                 )}
               />
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Sending...' : 'Send Verification Email'}
               </Button>
 

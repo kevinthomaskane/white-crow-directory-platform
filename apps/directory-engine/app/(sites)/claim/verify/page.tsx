@@ -1,58 +1,21 @@
-import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { CompleteSignupForm } from '@/components/sites/claim/complete-signup-form';
-import { claimBusinessAsUser } from '@/actions/claim-business';
+import { ClaimVerifyContent } from '@/components/sites/claim/claim-verify-content';
+import { LoadingSpinner } from '@/components/sites/loading-spinner';
 
 interface PageProps {
-  searchParams: Promise<{ siteBusinessId?: string }>;
+  searchParams: Promise<{ siteBusinessId?: string; businessUrl?: string }>;
 }
 
-export default async function ClaimVerifyPage({ searchParams }: PageProps) {
-  const { siteBusinessId } = await searchParams;
-
-  if (!siteBusinessId) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-bold">Invalid link</h1>
-          <p className="text-muted-foreground">
-            This verification link is invalid or has expired.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+async function ClaimVerifyLoader({
+  siteBusinessId,
+  businessUrl,
+}: {
+  siteBusinessId: string;
+  businessUrl: string;
+}) {
   const supabase = await createClient();
 
-  // Check if user is authenticated (via magic link)
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-bold">Session expired</h1>
-          <p className="text-muted-foreground">
-            Your verification session has expired. Please try claiming the
-            business again.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Fetch profile to check has_password
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('has_password')
-    .eq('id', user.id)
-    .single();
-
-  // Fetch business details
   const { data: siteBusiness } = await supabase
     .from('site_businesses')
     .select(
@@ -94,35 +57,41 @@ export default async function ClaimVerifyPage({ searchParams }: PageProps) {
 
   const business = siteBusiness.business as { id: string; name: string };
 
-  // If user already has a password, complete the claim directly
-  if (profile?.has_password) {
-    const result = await claimBusinessAsUser({ siteBusinessId });
+  return (
+    <ClaimVerifyContent
+      siteBusiness={{
+        id: siteBusiness.id,
+        is_claimed: siteBusiness.is_claimed ?? false,
+        verification_email: siteBusiness.verification_email,
+        business,
+      }}
+      businessUrl={businessUrl}
+    />
+  );
+}
 
-    if (result.ok) {
-      redirect(`/business/${business.id}`);
-    }
+export default async function ClaimVerifyPage({ searchParams }: PageProps) {
+  const { siteBusinessId, businessUrl } = await searchParams;
 
-    // If claim failed, show error
+  if (!siteBusinessId || !businessUrl) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-bold">Claim failed</h1>
-          <p className="text-muted-foreground">{result.error}</p>
+          <h1 className="text-2xl font-bold">Invalid link</h1>
+          <p className="text-muted-foreground">
+            This verification link is invalid or has expired.
+          </p>
         </div>
       </div>
     );
   }
 
-  // User doesn't have a password - show complete signup form
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <CompleteSignupForm
-          siteBusinessId={siteBusinessId}
-          businessName={business.name}
-          email={user.email ?? ''}
-        />
-      </div>
-    </div>
+    <Suspense fallback={<LoadingSpinner />}>
+      <ClaimVerifyLoader
+        siteBusinessId={siteBusinessId}
+        businessUrl={businessUrl}
+      />
+    </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@white-crow/shared';
 import type { ActionsResponse } from '@/lib/types';
 
 /**
@@ -29,14 +30,18 @@ export async function initiateBusinessClaim(payload: {
   siteBusinessId: string;
   email: string;
   redirectUrl: string;
+  businessUrl: string;
 }): Promise<ActionsResponse<{ message: string }>> {
-  const { siteBusinessId, email, redirectUrl } = payload;
+  const { siteBusinessId, email, redirectUrl, businessUrl } = payload;
 
   if (!siteBusinessId || !email) {
     return { ok: false, error: 'Missing required fields.' };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!
+  );
 
   // Fetch the site_business and related business data
   const { data: siteBusiness, error: fetchError } = await supabase
@@ -62,18 +67,24 @@ export async function initiateBusinessClaim(payload: {
     return { ok: false, error: 'This business has already been claimed.' };
   }
 
-  const business = siteBusiness.business as { id: string; website: string | null };
+  const business = siteBusiness.business as {
+    id: string;
+    website: string | null;
+  };
 
   if (!business.website) {
     return {
       ok: false,
-      error: 'This business does not have a website on file. Please contact our verification team.',
+      error:
+        'This business does not have a website on file. Please contact our verification team.',
     };
   }
 
-  // Validate email domain matches business website
   if (!validateEmailDomain(email, business.website)) {
-    const websiteDomain = new URL(business.website).hostname.replace(/^www\./, '');
+    const websiteDomain = new URL(business.website).hostname.replace(
+      /^www\./,
+      ''
+    );
     return {
       ok: false,
       error: `Email must match the business website domain (${websiteDomain}).`,
@@ -91,8 +102,6 @@ export async function initiateBusinessClaim(payload: {
     .update({
       verification_status: 'pending',
       verification_email: email,
-      verification_token: verificationToken,
-      verification_token_expires_at: expiresAt.toISOString(),
     })
     .eq('id', siteBusinessId);
 
@@ -101,17 +110,23 @@ export async function initiateBusinessClaim(payload: {
     return { ok: false, error: 'Failed to initiate claim. Please try again.' };
   }
 
-  // Send magic link via Supabase Auth
-  const { error: otpError } = await supabase.auth.signInWithOtp({
+  // Send magic link via Supabase Auth (uses anon client - signInWithOtp is for unauthenticated users)
+  const authClient = await createClient();
+  const { error: otpError } = await authClient.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${redirectUrl}?siteBusinessId=${siteBusinessId}`,
+      emailRedirectTo: `${redirectUrl}?siteBusinessId=${siteBusinessId}&businessUrl=${encodeURIComponent(
+        businessUrl
+      )}`,
     },
   });
 
   if (otpError) {
     console.error('Error sending magic link:', otpError);
-    return { ok: false, error: 'Failed to send verification email. Please try again.' };
+    return {
+      ok: false,
+      error: 'Failed to send verification email. Please try again.',
+    };
   }
 
   return {
@@ -169,18 +184,24 @@ export async function claimBusinessAsUser(payload: {
     return { ok: false, error: 'This business has already been claimed.' };
   }
 
-  const business = siteBusiness.business as { id: string; website: string | null };
+  const business = siteBusiness.business as {
+    id: string;
+    website: string | null;
+  };
 
   if (!business.website) {
     return {
       ok: false,
-      error: 'This business does not have a website on file. Please contact our verification team.',
+      error:
+        'This business does not have a website on file. Please contact our verification team.',
     };
   }
 
-  // Validate user's email domain matches business website
   if (!validateEmailDomain(user.email, business.website)) {
-    const websiteDomain = new URL(business.website).hostname.replace(/^www\./, '');
+    const websiteDomain = new URL(business.website).hostname.replace(
+      /^www\./,
+      ''
+    );
     return {
       ok: false,
       error: `Your account email must match the business website domain (${websiteDomain}).`,
@@ -216,7 +237,7 @@ export async function completeBusinessClaim(payload: {
   siteBusinessId: string;
   displayName: string;
   password: string;
-}): Promise<ActionsResponse<{ claimed: true; redirectTo: string }>> {
+}): Promise<ActionsResponse<{ claimed: true }>> {
   const { siteBusinessId, displayName, password } = payload;
 
   if (!siteBusinessId || !displayName || !password) {
@@ -281,7 +302,10 @@ export async function completeBusinessClaim(payload: {
         .update({ verification_status: 'expired' })
         .eq('id', siteBusinessId);
 
-      return { ok: false, error: 'Verification link has expired. Please try again.' };
+      return {
+        ok: false,
+        error: 'Verification link has expired. Please try again.',
+      };
     }
   }
 
@@ -326,13 +350,10 @@ export async function completeBusinessClaim(payload: {
     return { ok: false, error: 'Failed to claim business. Please try again.' };
   }
 
-  const business = siteBusiness.business as { id: string; name: string };
-
   return {
     ok: true,
     data: {
       claimed: true,
-      redirectTo: `/business/${business.id}`,
     },
   };
 }

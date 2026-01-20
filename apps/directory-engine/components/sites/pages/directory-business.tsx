@@ -191,7 +191,9 @@ export async function DirectoryBusinessPage({
                 {business.main_photo_name && (
                   <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4">
                     <Image
-                      src={`/api/places-photo?name=${encodeURIComponent(business.main_photo_name)}&maxHeight=600`}
+                      src={`/api/places-photo?name=${encodeURIComponent(
+                        business.main_photo_name
+                      )}&maxHeight=600`}
                       alt={business.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 66vw"
@@ -300,7 +302,9 @@ export async function DirectoryBusinessPage({
               basePath={basePath}
               hasMultipleCategories={hasMultipleCategories}
               hasMultipleCities={hasMultipleCities}
-              title={`Similar ${businessTermPlural} in ${cityData?.name ?? business.city ?? 'your area'}`}
+              title={`Similar ${businessTermPlural} in ${
+                cityData?.name ?? business.city ?? 'your area'
+              }`}
             />
           </Suspense>
         </div>
