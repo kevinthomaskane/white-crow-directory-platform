@@ -102,6 +102,26 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."handle_user_email_change"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+  -- Only update if email actually changed
+  if new.email is distinct from old.email then
+    update public.profiles
+    set email = new.email
+    where id = new.id;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."handle_user_email_change"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -165,7 +185,7 @@ ALTER TABLE "public"."business_reviews" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."businesses" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "place_id" "text" NOT NULL,
+    "place_id" "text",
     "raw" "jsonb" NOT NULL,
     "name" "text" NOT NULL,
     "formatted_address" "text",
@@ -271,8 +291,6 @@ CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
     "claimed_by" "uuid",
     "verification_status" "text" DEFAULT 'unverified'::"text",
     "verification_email" "text",
-    "verification_token" "text",
-    "verification_token_expires_at" timestamp with time zone,
     "verified_at" timestamp with time zone,
     "plan" "text",
     "stripe_customer_id" "text",
@@ -672,6 +690,10 @@ ALTER TABLE "public"."sites" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."states" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "users can claim or update own site businesses" ON "public"."site_businesses" FOR UPDATE USING ((("auth"."role"() = 'authenticated'::"text") AND ((NOT "is_claimed") OR ("claimed_by" = "auth"."uid"())))) WITH CHECK ((("auth"."role"() = 'authenticated'::"text") AND (("is_claimed" AND ("claimed_by" = "auth"."uid"())) OR (NOT "is_claimed"))));
+
+
+
 CREATE POLICY "users can delete categories for claimed businesses" ON "public"."business_categories" FOR DELETE USING ((EXISTS ( SELECT 1
    FROM "public"."site_businesses"
   WHERE (("site_businesses"."business_id" = "business_categories"."business_id") AND ("site_businesses"."claimed_by" = "auth"."uid"())))));
@@ -896,6 +918,12 @@ GRANT ALL ON FUNCTION "public"."claim_next_job"("p_worker_id" "text") TO "servic
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."handle_user_email_change"() TO "anon";
+GRANT ALL ON FUNCTION "public"."handle_user_email_change"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."handle_user_email_change"() TO "service_role";
 
 
 

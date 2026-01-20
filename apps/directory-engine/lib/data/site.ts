@@ -102,6 +102,49 @@ export const getRouteContext = cache(
   }
 );
 
+export interface SiteFormOptions {
+  categories: { id: string; name: string }[];
+  cities: { id: string; name: string }[];
+}
+
+export const getSiteFormOptions = cache(
+  async (site: SiteConfig): Promise<SiteFormOptions> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const [categoriesResult, citiesResult] = await Promise.all([
+      supabase
+        .from('site_categories')
+        .select('category:categories(id, name)')
+        .eq('site_id', site.id),
+      supabase
+        .from('site_cities')
+        .select('city:cities(id, name)')
+        .eq('site_id', site.id),
+    ]);
+
+    const categories = (categoriesResult.data || [])
+      .map((sc) => {
+        const cat = sc.category as { id: string; name: string } | null;
+        return cat ? { id: cat.id, name: cat.name } : null;
+      })
+      .filter((c): c is { id: string; name: string } => c !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const cities = (citiesResult.data || [])
+      .map((sc) => {
+        const city = sc.city as { id: string; name: string } | null;
+        return city ? { id: city.id, name: city.name } : null;
+      })
+      .filter((c): c is { id: string; name: string } => c !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { categories, cities };
+  }
+);
+
 export const getSiteStats = cache(
   async (site: SiteConfig, ctx: RouteContext): Promise<SiteStats> => {
     const supabase = createServiceRoleClient(

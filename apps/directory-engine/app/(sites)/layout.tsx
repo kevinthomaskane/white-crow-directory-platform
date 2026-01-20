@@ -7,7 +7,11 @@ export const dynamic = 'force-dynamic';
 
 interface NavContext {
   basePath: string;
-  terminology: { term_cta: string | null; term_categories: string | null };
+  terminology: {
+    term_cta: string | null;
+    term_categories: string | null;
+    term_business: string | null;
+  };
   hasMultipleCategories: boolean;
   hasMultipleCities: boolean;
 }
@@ -38,11 +42,21 @@ function buildNavItems(ctx: NavContext): NavItem[] {
   };
 
   if (subItems.length > 0) {
+    subItems.push({
+      label: 'View All',
+      href: `/${ctx.basePath}`,
+    });
     mainNavItem.hasSubNav = true;
     mainNavItem.subItems = subItems;
   }
 
-  return [mainNavItem, { label: 'Contact Us', href: '/contact' }];
+  const businessLabel = ctx.terminology.term_business || 'Business';
+
+  return [
+    mainNavItem,
+    { label: `Submit ${businessLabel}`, href: '/submit-business' },
+    { label: 'Contact Us', href: '/contact' },
+  ];
 }
 
 export default async function SitesLayout({
@@ -65,6 +79,7 @@ export default async function SitesLayout({
       terminology: {
         term_cta: siteConfig.vertical?.term_cta ?? null,
         term_categories: siteConfig.vertical?.term_categories ?? null,
+        term_business: siteConfig.vertical?.term_business ?? null,
       },
       hasMultipleCategories: routeContext.categoryList.length > 1,
       hasMultipleCities: routeContext.cityList.length > 1,

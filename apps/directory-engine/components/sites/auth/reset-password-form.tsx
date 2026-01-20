@@ -16,23 +16,31 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { createClient } from '@/lib/supabase/client';
+import { updatePassword } from '@/actions/auth';
 
-const formSchema = z.object({
-  email: z.email({ message: 'Please enter a valid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
-});
+const formSchema = z
+  .object({
+    password: z.string().min(8, {
+      message: 'Password must be at least 8 characters.',
+    }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  });
 
-export function LoginForm() {
+export function ResetPasswordForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
@@ -41,25 +49,36 @@ export function LoginForm() {
       setIsLoading(true);
       setError(null);
 
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const result = await updatePassword({ password: values.password });
 
-      if (authError) {
-        setError(authError.message);
+      if (!result.ok) {
+        setError(result.error);
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      setIsSuccess(true);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
-      console.error('Login error:', err);
+      console.error('Password update error:', err);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="rounded-lg border bg-muted/50 p-6">
+          <h2 className="text-lg font-semibold">Password updated</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your password has been successfully reset.
+          </p>
+        </div>
+        <Button onClick={() => router.push('/')} className="w-full">
+          Continue
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -67,14 +86,14 @@ export function LoginForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="email"
+          name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>New password</FormLabel>
               <FormControl>
                 <Input
-                  type="email"
-                  placeholder="you@example.com"
+                  type="password"
+                  placeholder="Enter your new password"
                   disabled={isLoading}
                   {...field}
                 />
@@ -86,14 +105,14 @@ export function LoginForm() {
 
         <FormField
           control={form.control}
-          name="password"
+          name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Confirm password</FormLabel>
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Confirm your new password"
                   disabled={isLoading}
                   {...field}
                 />
@@ -104,7 +123,7 @@ export function LoginForm() {
         />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Signing in...' : 'Sign in'}
+          {isLoading ? 'Updating...' : 'Update password'}
         </Button>
 
         {error && (
@@ -112,6 +131,15 @@ export function LoginForm() {
             {error}
           </div>
         )}
+
+        <div className="text-center">
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Back to login
+          </Link>
+        </div>
       </form>
     </Form>
   );

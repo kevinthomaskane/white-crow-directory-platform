@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -19,20 +18,18 @@ import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 
 const formSchema = z.object({
-  email: z.email({ message: 'Please enter a valid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
-export function LoginForm() {
-  const router = useRouter();
+export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: '',
     },
   });
 
@@ -42,24 +39,45 @@ export function LoginForm() {
       setError(null);
 
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        values.email,
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }
+      );
 
-      if (authError) {
-        setError(authError.message);
+      if (resetError) {
+        setError(resetError.message);
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      setIsSubmitted(true);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
-      console.error('Login error:', err);
+      console.error('Password reset error:', err);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isSubmitted) {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="rounded-lg border bg-muted/50 p-6">
+          <h2 className="text-lg font-semibold">Check your email</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            If an account exists with that email, we&apos;ve sent you a link to
+            reset your password.
+          </p>
+        </div>
+        <Link
+          href="/login"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Back to login
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -84,27 +102,8 @@ export function LoginForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Enter your password"
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Signing in...' : 'Sign in'}
+          {isLoading ? 'Sending...' : 'Send reset link'}
         </Button>
 
         {error && (
@@ -112,6 +111,15 @@ export function LoginForm() {
             {error}
           </div>
         )}
+
+        <div className="text-center">
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Back to login
+          </Link>
+        </div>
       </form>
     </Form>
   );

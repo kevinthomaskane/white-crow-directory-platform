@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -16,23 +14,25 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { createClient } from '@/lib/supabase/client';
+import { updateEmail } from '@/actions/auth';
 
 const formSchema = z.object({
-  email: z.email({ message: 'Please enter a valid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
-export function LoginForm() {
-  const router = useRouter();
+interface UpdateEmailFormProps {
+  currentEmail: string;
+}
+
+export function UpdateEmailForm({ currentEmail }: UpdateEmailFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: currentEmail,
     },
   });
 
@@ -40,23 +40,19 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       setError(null);
+      setSuccess(null);
 
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const result = await updateEmail({ email: values.email });
 
-      if (authError) {
-        setError(authError.message);
+      if (!result.ok) {
+        setError(result.error);
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      setSuccess(result.data.message);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
-      console.error('Login error:', err);
+      console.error('Email update error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +66,7 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Email address</FormLabel>
               <FormControl>
                 <Input
                   type="email"
@@ -84,32 +80,19 @@ export function LoginForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Enter your password"
-                  disabled={isLoading}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Signing in...' : 'Sign in'}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Updating...' : 'Update email'}
         </Button>
 
         {error && (
           <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-400">
+            {success}
           </div>
         )}
       </form>

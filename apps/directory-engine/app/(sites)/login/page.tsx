@@ -1,4 +1,5 @@
 import { LoginForm } from '@/components/sites/auth/login-form';
+import Link from 'next/link';
 
 export default function LoginPage() {
   return (
@@ -9,7 +10,13 @@ export default function LoginPage() {
             Welcome back
           </h1>
           <p className="text-sm text-muted-foreground">
-            Sign in to your account
+            Sign in to your account. Forgot your password?{' '}
+            <Link
+              href="/forgot-password"
+              className="text-sm underline text-accent-foreground hover:text-foreground"
+            >
+              Click here.
+            </Link>
           </p>
         </div>
 
@@ -17,8 +24,9 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account? To create one, find your business listing
-          and click &quot;Claim This Business&quot;.
+          and click &quot;Claim This Business&quot;
         </p>
+        <p></p>
       </div>
     </div>
   );

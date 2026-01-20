@@ -227,10 +227,13 @@ function UserAccountNav() {
         <DropdownMenuItem asChild>
           <Link href="/profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            My Profile
+            My Account
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="flex items-center gap-2"
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
@@ -291,7 +294,7 @@ function MobileUserAccount({ onClose }: { onClose: () => void }) {
         className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
       >
         <User className="h-4 w-4" />
-        My Profile
+        My Account
       </Link>
       <button
         onClick={handleSignOut}

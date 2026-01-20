@@ -153,7 +153,7 @@ export type Database = {
           main_photo_name: string | null
           name: string
           phone: string | null
-          place_id: string
+          place_id: string | null
           postal_code: string | null
           raw: Json
           state: string | null
@@ -175,7 +175,7 @@ export type Database = {
           main_photo_name?: string | null
           name: string
           phone?: string | null
-          place_id: string
+          place_id?: string | null
           postal_code?: string | null
           raw: Json
           state?: string | null
@@ -197,7 +197,7 @@ export type Database = {
           main_photo_name?: string | null
           name?: string
           phone?: string | null
-          place_id?: string
+          place_id?: string | null
           postal_code?: string | null
           raw?: Json
           state?: string | null
@@ -394,8 +394,6 @@ export type Database = {
           updated_at: string
           verification_email: string | null
           verification_status: string | null
-          verification_token: string | null
-          verification_token_expires_at: string | null
           verified_at: string | null
         }
         Insert: {
@@ -413,8 +411,6 @@ export type Database = {
           updated_at?: string
           verification_email?: string | null
           verification_status?: string | null
-          verification_token?: string | null
-          verification_token_expires_at?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -432,8 +428,6 @@ export type Database = {
           updated_at?: string
           verification_email?: string | null
           verification_status?: string | null
-          verification_token?: string | null
-          verification_token_expires_at?: string | null
           verified_at?: string | null
         }
         Relationships: [
