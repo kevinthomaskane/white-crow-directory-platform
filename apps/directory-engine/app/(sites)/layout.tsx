@@ -42,10 +42,7 @@ function buildNavItems(ctx: NavContext): NavItem[] {
     mainNavItem.subItems = subItems;
   }
 
-  return [
-    mainNavItem,
-    { label: 'Contact Us', href: '/contact', featured: true },
-  ];
+  return [mainNavItem, { label: 'Contact Us', href: '/contact' }];
 }
 
 export default async function SitesLayout({

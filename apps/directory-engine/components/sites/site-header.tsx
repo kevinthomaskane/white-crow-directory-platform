@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Menu, ChevronDown, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Menu, ChevronDown, ExternalLink, User, LogOut } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,14 +15,13 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/contexts/auth-context';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * Navigation item for sub-navigation dropdowns
@@ -85,49 +85,6 @@ export interface SiteHeaderProps {
   /** Whether to show a border on the bottom */
   bordered?: boolean;
 }
-
-/**
- * ListItem component for navigation menu dropdowns
- */
-const ListItem = React.forwardRef<
-  React.ComponentRef<'a'>,
-  React.ComponentPropsWithoutRef<'a'> & {
-    icon?: React.ComponentType<{ className?: string }>;
-    external?: boolean;
-  }
->(({ className, title, children, icon: Icon, external, ...props }, ref) => {
-  return (
-    <li>
-      <NavigationMenuLink asChild>
-        <a
-          ref={ref}
-          className={cn(
-            'block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-            className
-          )}
-          {...props}
-          {...(external
-            ? { target: '_blank', rel: 'noopener noreferrer' }
-            : {})}
-        >
-          <div className="flex items-center gap-2 text-sm font-medium leading-none">
-            {Icon && <Icon className="size-4" />}
-            {title}
-            {external && (
-              <ExternalLink className="size-3 text-muted-foreground" />
-            )}
-          </div>
-          {children && (
-            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-              {children}
-            </p>
-          )}
-        </a>
-      </NavigationMenuLink>
-    </li>
-  );
-});
-ListItem.displayName = 'ListItem';
 
 /**
  * Mobile navigation item component
@@ -225,6 +182,129 @@ function MobileNavItem({
 }
 
 /**
+ * User account navigation component
+ */
+function UserAccountNav() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+      >
+        Log in
+      </Link>
+    );
+  }
+
+  // Get display name from user metadata or email
+  const displayName =
+    (user.user_metadata?.display_name as string) ||
+    user.email?.split('@')[0] ||
+    'User';
+  const initial = displayName.charAt(0).toUpperCase();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.refresh();
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-80 transition-opacity">
+          {initial}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            My Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * Mobile user account component
+ */
+function MobileUserAccount({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return (
+      <div className="border-t border-border pt-4 mt-4">
+        <Link
+          href="/login"
+          onClick={onClose}
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Log in
+        </Link>
+      </div>
+    );
+  }
+
+  const displayName =
+    (user.user_metadata?.display_name as string) ||
+    user.email?.split('@')[0] ||
+    'User';
+  const initial = displayName.charAt(0).toUpperCase();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    onClose();
+    router.refresh();
+  }
+
+  return (
+    <div className="border-t border-border pt-4 mt-4">
+      <div className="flex items-center gap-3 px-3 mb-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
+          {initial}
+        </span>
+        <span className="text-sm font-medium">{displayName}</span>
+      </div>
+      <Link
+        href="/profile"
+        onClick={onClose}
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+      >
+        <User className="h-4 w-4" />
+        My Profile
+      </Link>
+      <button
+        onClick={handleSignOut}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+      >
+        <LogOut className="h-4 w-4" />
+        Sign Out
+      </button>
+    </div>
+  );
+}
+
+/**
  * Site header component for public directory sites
  */
 export function SiteHeader({
@@ -266,81 +346,82 @@ export function SiteHeader({
         </Link>
 
         {/* Desktop Navigation */}
-        <NavigationMenu className="hidden md:flex">
-          <NavigationMenuList>
-            {navItems.map((item) => {
-              const Icon = item.icon;
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
 
-              if (item.hasSubNav && item.subItems) {
-                return (
-                  <NavigationMenuItem key={item.label}>
-                    <NavigationMenuTrigger className="bg-transparent">
-                      {Icon && <Icon className="mr-1 size-4" />}
-                      {item.label}
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2">
-                        {item.subItems.map((subItem) => (
-                          <ListItem
-                            key={subItem.href}
-                            title={subItem.label}
-                            href={subItem.href}
-                            icon={subItem.icon}
-                            external={subItem.external}
-                          >
-                            {subItem.description}
-                          </ListItem>
-                        ))}
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                );
-              }
-
-              if (item.featured) {
-                return (
-                  <NavigationMenuItem key={item.label}>
-                    <Button asChild size="sm">
-                      <Link
-                        href={item.href || '#'}
-                        {...(item.external
-                          ? { target: '_blank', rel: 'noopener noreferrer' }
-                          : {})}
-                      >
-                        {Icon && <Icon className="size-4" />}
-                        {item.label}
-                        {item.external && <ExternalLink className="size-3" />}
-                      </Link>
-                    </Button>
-                  </NavigationMenuItem>
-                );
-              }
-
+            if (item.hasSubNav && item.subItems) {
               return (
-                <NavigationMenuItem key={item.label}>
-                  <NavigationMenuLink
-                    asChild
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      'bg-transparent'
-                    )}
+                <DropdownMenu key={item.label}>
+                  <DropdownMenuTrigger asChild>
+                    <button className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                      {Icon && <Icon className="size-4" />}
+                      {item.label}
+                      <ChevronDown className="size-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {item.subItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      return (
+                        <DropdownMenuItem key={subItem.href} asChild>
+                          <Link
+                            href={subItem.href}
+                            className="flex items-center gap-2"
+                            {...(subItem.external
+                              ? { target: '_blank', rel: 'noopener noreferrer' }
+                              : {})}
+                          >
+                            {SubIcon && <SubIcon className="size-4" />}
+                            {subItem.label}
+                            {subItem.external && (
+                              <ExternalLink className="size-3 text-muted-foreground" />
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+
+            if (item.featured) {
+              return (
+                <Button key={item.label} asChild size="sm">
+                  <Link
+                    href={item.href || '#'}
                     {...(item.external
                       ? { target: '_blank', rel: 'noopener noreferrer' }
                       : {})}
                   >
-                    <Link href={item.href || '#'}>
-                      {Icon && <Icon className="mr-1 size-4" />}
-                      {item.label}
-                      {item.external && (
-                        <ExternalLink className="ml-1 size-3 text-muted-foreground" />
-                      )}
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
+                    {Icon && <Icon className="size-4" />}
+                    {item.label}
+                    {item.external && <ExternalLink className="size-3" />}
+                  </Link>
+                </Button>
               );
-            })}
-          </NavigationMenuList>
-        </NavigationMenu>
+            }
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href || '#'}
+                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                {...(item.external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
+              >
+                {Icon && <Icon className="size-4" />}
+                {item.label}
+                {item.external && (
+                  <ExternalLink className="size-3 text-muted-foreground" />
+                )}
+              </Link>
+            );
+          })}
+          <UserAccountNav />
+        </nav>
 
         {/* Mobile Menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -377,6 +458,7 @@ export function SiteHeader({
                   onClose={() => setMobileMenuOpen(false)}
                 />
               ))}
+              <MobileUserAccount onClose={() => setMobileMenuOpen(false)} />
             </nav>
           </SheetContent>
         </Sheet>
