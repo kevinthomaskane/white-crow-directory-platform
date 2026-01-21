@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, validateEmailDomain } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -104,13 +104,7 @@ export function SubmitBusinessForm({
         : categories[0]?.id;
       const cityId = hasMultipleCities ? values.cityId! : cities[0]?.id;
 
-      const emailMatchesDomain =
-        values.businessEmail && values.businessWebsite
-          ? values.businessEmail.split('@')[1]?.toLowerCase() ===
-            values.businessWebsite.toLowerCase()
-          : false;
-
-      if (!emailMatchesDomain) {
+      if (!validateEmailDomain(values.businessEmail, values.businessWebsite)) {
         setError(
           'The business email domain must match the business website domain.'
         );

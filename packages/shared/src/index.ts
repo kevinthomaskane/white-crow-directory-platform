@@ -16,4 +16,5 @@ export {
   RefreshSiteBusinessesJobPayloadSchema,
 } from './jobs';
 export * from './typesense';
+export * from './google-places';
 export type ReviewSource = 'google_places';

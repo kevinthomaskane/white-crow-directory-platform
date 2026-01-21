@@ -1,4 +1,7 @@
 export const ADMIN_DOMAIN = 'whitecrowdirectoryengine.com';
+// TODO: Update email address
+export const CONTACT_EMAIL = 'kevin@10xdev.io';
+
 export const ADMIN_SITE_NAV = [
   { title: 'Verticals', href: '/admin/verticals' },
   { title: 'Categories', href: '/admin/categories' },

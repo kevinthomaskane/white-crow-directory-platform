@@ -9,8 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Globe, MapPin, Layers, Building2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Globe,
+  MapPin,
+  Layers,
+  Building2,
+  FileText,
+} from 'lucide-react';
 import { SyncSearchButton } from '@/components/admin/sync-search-button';
+import { SubmissionActions } from '@/components/admin/submission-actions';
 import { RefreshBusinessesButton } from '@/components/admin/refresh-businesses-button';
 import { SiteAssetsForm } from '@/components/admin/site-assets-form';
 import { AddSiteCategoriesForm } from '@/components/admin/add-site-categories-form';
@@ -69,6 +77,24 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
+
+  // Get business submissions for this site
+  const { data: submissions } = await supabase
+    .from('business_submissions')
+    .select(
+      `
+      id,
+      business_name,
+      business_email,
+      business_website,
+      status,
+      submitted_at,
+      category:categories(name),
+      city:cities(name)
+    `
+    )
+    .eq('site_id', id)
+    .order('submitted_at', { ascending: false });
 
   const searchIndexIsSynced =
     lastSyncJob?.status === 'completed' &&
@@ -312,6 +338,70 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
             currentLogoPath={site.logo_path}
             currentFaviconPath={site.favicon_path}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Submissions</CardTitle>
+          <CardDescription>
+            Review businesses submitted for inclusion in this directory. Upon
+            approval, the business will be enriched with data from Google
+            Places, and an email will notify the submitter to claim their
+            listing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {submissions && submissions.length > 0 ? (
+            <ul className="space-y-3">
+              {submissions.map((submission) => (
+                <li
+                  key={submission.id}
+                  className="flex items-center justify-between rounded-lg border border-border p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {submission.business_name}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          submission.status === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : submission.status === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+                        {submission.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {(submission.category as { name: string } | null)?.name} ·{' '}
+                      {(submission.city as { name: string } | null)?.name}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {submission.business_email}
+                      {submission.business_website && (
+                        <> · {submission.business_website}</>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Submitted{' '}
+                      {new Date(submission.submitted_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {submission.status === 'pending' && (
+                    <SubmissionActions submissionId={submission.id} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No business submissions yet.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

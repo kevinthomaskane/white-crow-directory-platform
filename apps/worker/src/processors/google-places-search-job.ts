@@ -1,10 +1,14 @@
 import {
   ReviewSource,
   type GooglePlacesSearchJobMeta,
+  placeDetailsFieldMask,
+  parseAddressComponents,
+  type Review,
 } from '@white-crow/shared';
 import { supabase } from '../lib/supabase/client';
 import type { BusinessReviewInsert, GooglePlacesSearchJob } from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
+import { fetchWithRetry } from '../lib/google-places';
 
 type PlaceMinimal = {
   id: string;
@@ -12,23 +16,6 @@ type PlaceMinimal = {
 type GooglePlacesSearchResponse = {
   places: PlaceMinimal[];
   nextPageToken?: string;
-};
-
-type AddressComponent = {
-  types?: string[];
-  longText: string;
-};
-
-type Review = {
-  name: string;
-  rating: number;
-  text: { text: string };
-  publishTime: string;
-  authorAttribution?: {
-    displayName: string;
-    photoUri: string;
-    uri: string;
-  };
 };
 
 /**
@@ -70,52 +57,6 @@ function createCityLookupCache() {
     cache.set(key, data.id);
     return data.id;
   };
-}
-
-const placeDetailsFieldMask = [
-  'id',
-  'displayName',
-  'formattedAddress',
-  'addressComponents',
-  'location',
-  'websiteUri',
-  'nationalPhoneNumber',
-  'editorialSummary',
-  'regularOpeningHours',
-  'photos',
-  'rating',
-  'reviews',
-  'googleMapsUri',
-  'userRatingCount',
-];
-
-const MAX_RETRIES = 2;
-const BASE_DELAY_MS = 500;
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  attempt = 0
-): Promise<Response> {
-  const res = await fetch(url, options);
-
-  if (res.ok) {
-    return res;
-  }
-
-  // Retry on 5xx errors or 429 (rate limit)
-  const shouldRetry = res.status >= 500 || res.status === 429;
-
-  if (shouldRetry && attempt < MAX_RETRIES) {
-    const delay = BASE_DELAY_MS * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms...
-    console.log(
-      `  Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`
-    );
-    await new Promise((r) => setTimeout(r, delay));
-    return fetchWithRetry(url, options, attempt + 1);
-  }
-
-  return res;
 }
 
 export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
@@ -377,44 +318,6 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     `[Job ${job.id}] ✓ Completed processing ${meta.processed_places}/${places.length} place(s)`
   );
   await markJobCompleted(job.id, meta);
-}
-
-function parseAddressComponents(components: AddressComponent[]) {
-  const result = {
-    streetNumber: '',
-    route: '',
-    city: '',
-    state: '',
-    postalCode: '',
-  };
-
-  const typeMap: Record<string, keyof typeof result> = {
-    street_number: 'streetNumber',
-    route: 'route',
-    locality: 'city',
-    administrative_area_level_1: 'state',
-    postal_code: 'postalCode',
-  };
-
-  for (const component of components) {
-    for (const type of component.types ?? []) {
-      const key = typeMap[type];
-      if (!key) continue;
-      if (result[key]) continue;
-
-      result[key] = component.longText;
-      break; // stop once we matched a relevant type
-    }
-  }
-
-  return {
-    streetAddress: [result.streetNumber, result.route]
-      .filter(Boolean)
-      .join(' '),
-    city: result.city,
-    state: result.state,
-    postalCode: result.postalCode,
-  };
 }
 
 async function runSearchQueries(params: { apiKey: string; query: string }) {

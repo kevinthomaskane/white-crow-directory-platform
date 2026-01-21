@@ -1,71 +1,17 @@
 import {
   ReviewSource,
   type RefreshSiteBusinessesJobMeta,
+  placeDetailsFieldMask,
+  type Review,
 } from '@white-crow/shared';
 import { supabase } from '../lib/supabase/client';
 import type { BusinessReviewInsert, RefreshSiteBusinessesJob } from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
-
-type Review = {
-  name: string;
-  rating: number;
-  text: { text: string };
-  publishTime: string;
-  authorAttribution?: {
-    displayName: string;
-    photoUri: string;
-    uri: string;
-  };
-};
-
-const placeDetailsFieldMask = [
-  'id',
-  'displayName',
-  'formattedAddress',
-  'addressComponents',
-  'location',
-  'websiteUri',
-  'nationalPhoneNumber',
-  'editorialSummary',
-  'regularOpeningHours',
-  'photos',
-  'rating',
-  'reviews',
-  'googleMapsUri',
-  'userRatingCount',
-];
+import { fetchWithRetry } from '../lib/google-places';
 
 const PAGE_SIZE = 500; // Fetch businesses in pages
 const BATCH_SIZE = 10; // Process this many API calls at a time
 const BATCH_DELAY_MS = 500; // Delay between batches
-const MAX_RETRIES = 2;
-const BASE_DELAY_MS = 500;
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  attempt = 0
-): Promise<Response> {
-  const res = await fetch(url, options);
-
-  if (res.ok) {
-    return res;
-  }
-
-  // Retry on 5xx errors or 429 (rate limit)
-  const shouldRetry = res.status >= 500 || res.status === 429;
-
-  if (shouldRetry && attempt < MAX_RETRIES) {
-    const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-    console.log(
-      `  Retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})...`
-    );
-    await new Promise((r) => setTimeout(r, delay));
-    return fetchWithRetry(url, options, attempt + 1);
-  }
-
-  return res;
-}
 
 export async function handleRefreshSiteBusinessesJob(
   job: RefreshSiteBusinessesJob

@@ -3,24 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@white-crow/shared';
 import type { ActionsResponse } from '@/lib/types';
-
-/**
- * Validates that the email domain matches the business website domain
- */
-function validateEmailDomain(email: string, businessWebsite: string): boolean {
-  try {
-    const emailDomain = email.split('@')[1]?.toLowerCase();
-    if (!emailDomain) return false;
-
-    const websiteDomain = new URL(businessWebsite).hostname
-      .replace(/^www\./, '')
-      .toLowerCase();
-
-    return emailDomain === websiteDomain;
-  } catch {
-    return false;
-  }
-}
+import { validateEmailDomain } from '@/lib/utils';
 
 /**
  * Initiates a business claim for unauthenticated users.
@@ -90,11 +73,6 @@ export async function initiateBusinessClaim(payload: {
       error: `Email must match the business website domain (${websiteDomain}).`,
     };
   }
-
-  // Generate verification token
-  const verificationToken = crypto.randomUUID();
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 24);
 
   // Update site_businesses with verification data
   const { error: updateError } = await supabase
@@ -268,8 +246,6 @@ export async function completeBusinessClaim(payload: {
       id,
       is_claimed,
       verification_email,
-      verification_token,
-      verification_token_expires_at,
       business:businesses!inner(
         id,
         name
@@ -290,23 +266,6 @@ export async function completeBusinessClaim(payload: {
   // Verify email matches
   if (siteBusiness.verification_email !== user.email) {
     return { ok: false, error: 'Email mismatch. Please try again.' };
-  }
-
-  // Check token expiration
-  if (siteBusiness.verification_token_expires_at) {
-    const expiresAt = new Date(siteBusiness.verification_token_expires_at);
-    if (expiresAt < new Date()) {
-      // Reset verification status
-      await supabase
-        .from('site_businesses')
-        .update({ verification_status: 'expired' })
-        .eq('id', siteBusinessId);
-
-      return {
-        ok: false,
-        error: 'Verification link has expired. Please try again.',
-      };
-    }
   }
 
   // Set user password

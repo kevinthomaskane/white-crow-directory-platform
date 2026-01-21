@@ -183,6 +183,27 @@ CREATE TABLE IF NOT EXISTS "public"."business_reviews" (
 ALTER TABLE "public"."business_reviews" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."business_submissions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "site_id" "uuid" NOT NULL,
+    "business_name" "text" NOT NULL,
+    "business_email" "text" NOT NULL,
+    "business_website" "text",
+    "category_id" "uuid" NOT NULL,
+    "city_id" "uuid" NOT NULL,
+    "status" "text" DEFAULT 'pending'::"text" NOT NULL,
+    "submitted_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "reviewed_at" timestamp with time zone,
+    "reviewed_by" "uuid",
+    "admin_notes" "text",
+    "business_id" "uuid",
+    CONSTRAINT "business_submissions_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'approved'::"text", 'rejected'::"text"])))
+);
+
+
+ALTER TABLE "public"."business_submissions" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."businesses" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "place_id" "text",
@@ -393,6 +414,11 @@ ALTER TABLE ONLY "public"."business_reviews"
 
 
 
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."businesses"
     ADD CONSTRAINT "businesses_pkey" PRIMARY KEY ("id");
 
@@ -493,6 +519,14 @@ ALTER TABLE ONLY "public"."verticals"
 
 
 
+CREATE INDEX "idx_business_submissions_pending" ON "public"."business_submissions" USING "btree" ("status") WHERE ("status" = 'pending'::"text");
+
+
+
+CREATE INDEX "idx_business_submissions_site_status" ON "public"."business_submissions" USING "btree" ("site_id", "status");
+
+
+
 ALTER TABLE ONLY "public"."business_categories"
     ADD CONSTRAINT "business_categories_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
@@ -515,6 +549,31 @@ ALTER TABLE ONLY "public"."business_reviews"
 
 ALTER TABLE ONLY "public"."business_reviews"
     ADD CONSTRAINT "business_reviews_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id");
+
+
+
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id");
+
+
+
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
+
+
+
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."business_submissions"
+    ADD CONSTRAINT "business_submissions_site_id_fkey" FOREIGN KEY ("site_id") REFERENCES "public"."sites"("id") ON DELETE CASCADE;
 
 
 
@@ -580,6 +639,14 @@ ALTER TABLE ONLY "public"."sites"
 
 ALTER TABLE ONLY "public"."sites"
     ADD CONSTRAINT "sites_vertical_id_fkey" FOREIGN KEY ("vertical_id") REFERENCES "public"."verticals"("id") ON DELETE CASCADE;
+
+
+
+CREATE POLICY "Admins can manage business submissions" ON "public"."business_submissions" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
+
+
+
+CREATE POLICY "Anyone can submit a business" ON "public"."business_submissions" FOR INSERT TO "authenticated", "anon" WITH CHECK (true);
 
 
 
@@ -658,6 +725,9 @@ ALTER TABLE "public"."business_review_sources" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."business_reviews" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."business_submissions" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."businesses" ENABLE ROW LEVEL SECURITY;
@@ -963,6 +1033,12 @@ GRANT ALL ON TABLE "public"."business_review_sources" TO "service_role";
 GRANT ALL ON TABLE "public"."business_reviews" TO "anon";
 GRANT ALL ON TABLE "public"."business_reviews" TO "authenticated";
 GRANT ALL ON TABLE "public"."business_reviews" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."business_submissions" TO "anon";
+GRANT ALL ON TABLE "public"."business_submissions" TO "authenticated";
+GRANT ALL ON TABLE "public"."business_submissions" TO "service_role";
 
 
 

@@ -138,6 +138,90 @@ export type Database = {
           },
         ]
       }
+      business_submissions: {
+        Row: {
+          admin_notes: string | null
+          business_email: string
+          business_id: string | null
+          business_name: string
+          business_website: string | null
+          category_id: string
+          city_id: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          site_id: string
+          status: string
+          submitted_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_email: string
+          business_id?: string | null
+          business_name: string
+          business_website?: string | null
+          category_id: string
+          city_id: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          site_id: string
+          status?: string
+          submitted_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          business_email?: string
+          business_id?: string | null
+          business_name?: string
+          business_website?: string | null
+          category_id?: string
+          city_id?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          site_id?: string
+          status?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_submissions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_submissions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_submissions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_submissions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_submissions_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           city: string | null

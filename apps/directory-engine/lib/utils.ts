@@ -58,3 +58,24 @@ export function normalizeCategoryName(input: string) {
 
   return titled.join(' ');
 }
+
+/**
+ * Validates that the email domain matches the business website domain
+ */
+export function validateEmailDomain(
+  email: string,
+  businessWebsite: string
+): boolean {
+  try {
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    if (!emailDomain) return false;
+
+    const websiteDomain = new URL(businessWebsite).hostname
+      .replace(/^www\./, '')
+      .toLowerCase();
+
+    return emailDomain === websiteDomain;
+  } catch {
+    return false;
+  }
+}
