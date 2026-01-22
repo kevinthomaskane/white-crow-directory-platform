@@ -94,6 +94,7 @@ export default async function SiteDetailPage({ params }: SiteDetailPageProps) {
     `
     )
     .eq('site_id', id)
+    .eq('status', 'pending')
     .order('submitted_at', { ascending: false });
 
   const searchIndexIsSynced =

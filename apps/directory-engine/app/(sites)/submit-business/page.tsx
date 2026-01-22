@@ -14,8 +14,8 @@ export default async function SubmitBusinessPage() {
   const termBusiness = siteConfig.vertical?.term_business || 'Business';
 
   return (
-    <div className="bg-muted/30 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-xl">
+    <div className="bg-muted/30 py-16 px-4">
+      <div className="mx-auto max-w-xl px-4">
         <div className="space-y-2 text-center mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">
             Submit Your {termBusiness}

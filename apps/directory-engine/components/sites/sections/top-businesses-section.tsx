@@ -39,7 +39,7 @@ async function BusinessesContent({
 
   return (
     <section className={cn('w-full py-16', className)}>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="flex items-end justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
@@ -95,7 +95,7 @@ function buildBusinessUrl(
 function BusinessesSkeleton({ title = 'Top Rated' }: { title?: string }) {
   return (
     <section className="w-full py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
         </div>

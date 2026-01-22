@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { UpdateEmailForm } from '@/components/sites/profile/update-email-form';
+import { Button } from '@/components/ui/button';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -20,6 +22,7 @@ export default async function ProfilePage() {
       `
       id,
       claimed_at,
+      plan,
       business:businesses!inner(
         id,
         name
@@ -35,8 +38,8 @@ export default async function ProfilePage() {
     'User';
 
   return (
-    <div className="bg-muted/30 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-12">
+    <div className="bg-muted/30 py-16">
+      <div className="mx-auto max-w-6xl px-4 space-y-12">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">My Account</h1>
           <p className="text-muted-foreground">Welcome back, {displayName}</p>
@@ -77,6 +80,22 @@ export default async function ProfilePage() {
                       Claimed on{' '}
                       {new Date(item.claimed_at!).toLocaleDateString()}
                     </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {item.plan && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          href={`/profile/listings/${item.id}/subscription`}
+                        >
+                          Manage Subscription
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/profile/listings/${item.id}`}>
+                        Manage Listing
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               ))}

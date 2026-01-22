@@ -40,8 +40,8 @@ export async function DirectoryCategoryPage({
   return (
     <div>
       {/* Header */}
-      <div className="bg-muted/30 py-16 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="bg-muted/30 py-16 px-4">
+        <div className="mx-auto max-w-6xl px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link href={`/${basePath}`} className="hover:text-foreground">
@@ -72,7 +72,7 @@ export async function DirectoryCategoryPage({
 
       {/* Business Listings */}
       <div className="py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-bold tracking-tight mb-4">
             Results for {category.name}
           </h2>

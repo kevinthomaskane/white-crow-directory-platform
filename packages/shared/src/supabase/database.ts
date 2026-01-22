@@ -470,6 +470,7 @@ export type Database = {
           created_at: string
           id: string
           is_claimed: boolean | null
+          overrides: Json | null
           plan: string | null
           site_id: string
           stripe_customer_id: string | null
@@ -487,6 +488,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_claimed?: boolean | null
+          overrides?: Json | null
           plan?: string | null
           site_id: string
           stripe_customer_id?: string | null
@@ -504,6 +506,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_claimed?: boolean | null
+          overrides?: Json | null
           plan?: string | null
           site_id?: string
           stripe_customer_id?: string | null

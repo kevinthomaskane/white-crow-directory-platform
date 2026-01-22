@@ -42,12 +42,14 @@ async function CitiesContent({
 
   return (
     <section id="by-location" className={cn('w-full py-16', className)}>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="flex items-end justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
             {description && (
-              <p className="mt-2 text-lg text-muted-foreground">{description}</p>
+              <p className="mt-2 text-lg text-muted-foreground">
+                {description}
+              </p>
             )}
           </div>
           {hasMore && (
@@ -96,7 +98,7 @@ function CityCard({ city, href }: CityCardProps) {
 function CitiesSkeleton({ title = 'Popular Cities' }: { title?: string }) {
   return (
     <section className="w-full py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
         </div>

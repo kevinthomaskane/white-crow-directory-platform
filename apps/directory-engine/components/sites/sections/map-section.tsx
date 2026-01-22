@@ -34,7 +34,7 @@ async function MapSectionContent({
   if (!mapboxToken) {
     return (
       <section className={cn('w-full', className)}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4">
           <div className="w-full h-[500px] rounded-lg border bg-muted flex items-center justify-center">
             <p className="text-muted-foreground">
               Map is not available. Mapbox token not configured.
@@ -55,10 +55,12 @@ async function MapSectionContent({
 
   return (
     <section className={cn('w-full py-16', className)}>
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
-          <p className="mt-2 text-lg text-muted-foreground">{sectionDescription}</p>
+          <p className="mt-2 text-lg text-muted-foreground">
+            {sectionDescription}
+          </p>
         </div>
 
         <BusinessMapWrapper
@@ -80,7 +82,7 @@ async function MapSectionContent({
 function MapSkeleton({ title = 'Find Nearby' }: { title?: string }) {
   return (
     <section className="w-full py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
           <div className="mt-2 h-6 w-48 rounded bg-muted animate-pulse" />

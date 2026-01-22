@@ -315,6 +315,7 @@ CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
     "verified_at" timestamp with time zone,
     "plan" "text",
     "stripe_customer_id" "text",
+    "overrides" "jsonb",
     CONSTRAINT "site_businesses_plan_check" CHECK ((("plan" IS NULL) OR ("plan" = ANY (ARRAY['free'::"text", 'premium'::"text"])))),
     CONSTRAINT "site_businesses_verification_status_check" CHECK (("verification_status" = ANY (ARRAY['unverified'::"text", 'pending'::"text", 'verified'::"text", 'expired'::"text"])))
 );

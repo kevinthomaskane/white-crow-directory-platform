@@ -24,7 +24,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
   return (
     <div>
       {/* Header */}
-      <div className="bg-muted/30 py-16 px-4 sm:px-6 lg:px-8 mb-8 text-center">
+      <div className="bg-muted/30 py-16 px-4 text-center">
         <div className="mx-auto max-w-3xl">
           <h1 className="text-3xl font-bold tracking-tight mb-2">
             Browse{' '}

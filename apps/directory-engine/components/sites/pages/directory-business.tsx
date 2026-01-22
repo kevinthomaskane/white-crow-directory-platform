@@ -62,7 +62,7 @@ export async function DirectoryBusinessPage({
   return (
     <div>
       {/* Header */}
-      <div className="bg-muted/30 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="bg-muted/30 py-12 px-4">
         <div className="mx-auto max-w-6xl">
           {/* Breadcrumb */}
           <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
@@ -166,7 +166,7 @@ export async function DirectoryBusinessPage({
       </div>
 
       {/* Main Content */}
-      <div className="py-12 px-4 sm:px-6 lg:px-8">
+      <div className="py-12 px-4">
         <div className="mx-auto max-w-6xl">
           {/* Claim Banner - Prominent */}
           {!business.is_claimed && (

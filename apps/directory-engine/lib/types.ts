@@ -106,6 +106,25 @@ export type SiteAssetType = 'hero' | 'logo' | 'favicon';
 
 // Business types
 type Business = Database['public']['Tables']['businesses']['Row'];
+
+/**
+ * User-provided overrides for business data stored in site_businesses.overrides
+ * These take precedence over base business data when displaying
+ */
+export type SiteBusinessOverrides = Partial<
+  Pick<
+    Business,
+    | 'name'
+    | 'website'
+    | 'phone'
+    | 'hours'
+    | 'formatted_address'
+    | 'street_address'
+    | 'city'
+    | 'state'
+    | 'postal_code'
+  >
+>;
 type SiteBusiness = Database['public']['Tables']['site_businesses']['Row'];
 type BusinessReviewSource =
   Database['public']['Tables']['business_review_sources']['Row'];
