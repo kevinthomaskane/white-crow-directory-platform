@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ChevronRight, Building2, MapPin, Loader2 } from 'lucide-react';
 import type { SiteConfig, RouteContext, BusinessDetailData } from '@/lib/types';
+import { getBusinessImageUrl } from '@/lib/utils';
 import {
   getBusinessDetails,
   getBusinessReviews,
@@ -188,12 +189,10 @@ export async function DirectoryBusinessPage({
                 </h2>
 
                 {/* Business Photo */}
-                {business.main_photo_name && (
+                {getBusinessImageUrl(business.main_photo_name) ? (
                   <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4">
                     <Image
-                      src={`/api/places-photo?name=${encodeURIComponent(
-                        business.main_photo_name
-                      )}&maxHeight=600`}
+                      src={getBusinessImageUrl(business.main_photo_name, { width: 1200 })!}
                       alt={business.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 66vw"
@@ -201,9 +200,7 @@ export async function DirectoryBusinessPage({
                       priority
                     />
                   </div>
-                )}
-
-                {!business.main_photo_name && (
+                ) : (
                   <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4 flex items-center justify-center">
                     <Building2 className="h-16 w-16 text-muted-foreground" />
                   </div>

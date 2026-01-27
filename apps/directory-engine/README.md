@@ -21,11 +21,11 @@ Each vertical has its own public bucket in Supabase Storage named after the vert
 
 The `verticals` table stores the public URLs for each asset:
 
-| Field | Description |
-|-------|-------------|
+| Field              | Description                     |
+| ------------------ | ------------------------------- |
 | `default_hero_url` | Hero image URL for the vertical |
-| `logo_url` | Logo URL (TODO) |
-| `favicon_url` | Favicon URL (TODO) |
+| `logo_url`         | Logo URL (TODO)                 |
+| `favicon_url`      | Favicon URL (TODO)              |
 
 ### Upload Flow
 
@@ -40,16 +40,19 @@ The `verticals` table stores the public URLs for each asset:
 To add a new vertical asset (e.g., `logo`):
 
 1. **Add the asset type** to `lib/types.ts`:
+
    ```ts
    export type VerticalAssetType = 'hero' | 'logo' | 'favicon';
    ```
 
 2. **Add database field** to `verticals` table (if not exists):
+
    ```sql
    ALTER TABLE verticals ADD COLUMN logo_url TEXT;
    ```
 
 3. **Create a save action** in `actions/upload-vertical-asset.ts`:
+
    ```ts
    export async function saveVerticalLogoUrl(
      verticalId: string,
@@ -60,6 +63,7 @@ To add a new vertical asset (e.g., `logo`):
    ```
 
 4. **Add to SiteConfig** in `lib/routing/types.ts`:
+
    ```ts
    export interface SiteConfig {
      // ...existing fields
@@ -79,8 +83,6 @@ Using timestamped filenames (e.g., `hero-1704067200000`) instead of fixed names 
 - **Rollback capability** - old files remain in storage
 - **CDN-friendly** - immutable URLs cache indefinitely
 
-
-
 ### TESTING Login
 
 PICQUET LAW FIRM
@@ -91,4 +93,4 @@ Anne-Marie L. Bowen, P.A.
 http://www.bowenbankruptcylaw.com/
 business id: 03c1f359-a6e3-42b8-a3d1-df1b39f6511d
 
-
+checking for supabase/google places image is incorrect in business edit form

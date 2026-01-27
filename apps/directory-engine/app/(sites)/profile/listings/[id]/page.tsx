@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { BusinessEditForm } from '@/components/sites/account-listings/business-edit-form';
+import type { SiteBusinessOverrides } from '@/lib/types';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -27,6 +28,10 @@ export default async function ManageListingPage({ params }: Props) {
       id,
       claimed_at,
       plan,
+      overrides,
+      site:sites!inner(
+        domain
+      ),
       business:businesses!inner(
         id,
         name,
@@ -34,7 +39,9 @@ export default async function ManageListingPage({ params }: Props) {
         phone,
         website,
         formatted_address,
-        hours
+        hours,
+        editorial_summary,
+        main_photo_name
       )
     `
     )
@@ -63,40 +70,44 @@ export default async function ManageListingPage({ params }: Props) {
           </Button>
         </div>
 
-        {siteBusiness.plan ? (
-          <div className="rounded-lg border bg-card p-6 space-y-6">
+        {siteBusiness.plan && (
+          <div className="rounded-lg border bg-card p-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-medium mb-2">Current Plan</h2>
+              <h2 className="text-lg font-medium">Current Plan</h2>
               <p className="text-muted-foreground capitalize">
                 {siteBusiness.plan}
               </p>
             </div>
-            <div className="border-t pt-6">
-              <p className="text-sm text-muted-foreground">
-                Premium listing management form coming soon.
-              </p>
-              <Button variant="outline" className="mt-4" asChild>
-                <Link href={`/profile/listings/${id}/subscription`}>
-                  Manage Subscription
-                </Link>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-lg font-medium mb-6">Edit Business Information</h2>
-            <BusinessEditForm
-              siteBusinessId={siteBusiness.id}
-              defaultValues={{
-                name: siteBusiness.business.name,
-                website: siteBusiness.business.website,
-                phone: siteBusiness.business.phone,
-                formatted_address: siteBusiness.business.formatted_address,
-                hours: siteBusiness.business.hours as { weekday_text?: string[] } | null,
-              }}
-            />
+            <Button variant="outline" asChild>
+              <Link href={`/profile/listings/${id}/subscription`}>
+                Manage Subscription
+              </Link>
+            </Button>
           </div>
         )}
+
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="text-lg font-medium mb-6">Edit Business Information</h2>
+          {(() => {
+            const overrides = siteBusiness.overrides as SiteBusinessOverrides | null;
+            return (
+              <BusinessEditForm
+                siteBusinessId={siteBusiness.id}
+                siteDomain={siteBusiness.site.domain}
+                plan={siteBusiness.plan}
+                defaultValues={{
+                  name: overrides?.name ?? siteBusiness.business.name,
+                  website: overrides?.website ?? siteBusiness.business.website,
+                  phone: overrides?.phone ?? siteBusiness.business.phone,
+                  formatted_address: overrides?.formatted_address ?? siteBusiness.business.formatted_address,
+                  hours: (overrides?.hours ?? siteBusiness.business.hours) as { weekday_text?: string[] } | null,
+                  editorial_summary: overrides?.editorial_summary ?? siteBusiness.business.editorial_summary,
+                  main_photo_name: overrides?.main_photo_name ?? siteBusiness.business.main_photo_name,
+                }}
+              />
+            );
+          })()}
+        </div>
       </div>
     </div>
   );

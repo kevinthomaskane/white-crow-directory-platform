@@ -69,24 +69,25 @@ export const getRouteContext = cache(
       process.env.SUPABASE_SECRET_KEY!
     );
 
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug, name)')
-      .eq('site_id', site.id);
+    const [siteCategories, siteCities] = await Promise.all([
+      supabase
+        .from('site_categories')
+        .select('category:categories(slug, name)')
+        .eq('site_id', site.id),
+      supabase
+        .from('site_cities')
+        .select('city:cities(name)')
+        .eq('site_id', site.id),
+    ]);
 
-    const { data: siteCities } = await supabase
-      .from('site_cities')
-      .select('city:cities(name)')
-      .eq('site_id', site.id);
-
-    const categoryList: CategoryData[] = (siteCategories || [])
+    const categoryList: CategoryData[] = (siteCategories.data || [])
       .map((sc) => {
         const cat = sc.category as { slug: string; name: string } | null;
         return cat ? { slug: cat.slug, name: cat.name } : null;
       })
       .filter((c): c is CategoryData => c !== null);
 
-    const cityList: CityData[] = (siteCities || [])
+    const cityList: CityData[] = (siteCities.data || [])
       .map((sc) => {
         const city = sc.city as { name: string } | null;
         return city ? { slug: slugify(city.name), name: city.name } : null;

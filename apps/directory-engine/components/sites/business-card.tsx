@@ -8,7 +8,7 @@ import {
   MapPin,
   ExternalLink,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getBusinessImageUrl } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import type { BusinessCardData } from '@/lib/types';
 
@@ -31,9 +31,9 @@ export function BusinessCard({ business, href, className }: BusinessCardProps) {
     >
       {/* Image */}
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:h-32 sm:w-32">
-        {business.main_photo_name ? (
+        {getBusinessImageUrl(business.main_photo_name) ? (
           <Image
-            src={`/api/places-photo?name=${encodeURIComponent(business.main_photo_name)}&maxHeight=300`}
+            src={getBusinessImageUrl(business.main_photo_name)!}
             alt={business.name}
             fill
             sizes="(max-width: 640px) 96px, 128px"

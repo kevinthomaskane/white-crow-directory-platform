@@ -79,3 +79,46 @@ export function validateEmailDomain(
     return false;
   }
 }
+
+interface BusinessImageOptions {
+  /** Width for the image (default: 800) */
+  width?: number;
+  /** Height for the image (optional, maintains aspect ratio if omitted) */
+  height?: number;
+  /** Quality 1-100 for Supabase images (default: 80) */
+  quality?: number;
+}
+
+/**
+ * Generates the URL for a business photo.
+ * Handles both Google Places photo names (places/...) and Supabase storage paths.
+ *
+ * For Supabase images, uses the render/image endpoint for on-the-fly transformations.
+ *
+ * @param photoName - The photo name or storage path
+ * @param options - Transform options (width, height, quality)
+ * @returns The URL to fetch the image, or null if no photo name provided
+ */
+export function getBusinessImageUrl(
+  photoName: string | null | undefined,
+  options: BusinessImageOptions = {}
+): string | null {
+  if (!photoName) return null;
+
+  const { width = 800, height, quality = 80 } = options;
+
+  // Google Places photo names start with "places/"
+  if (photoName.startsWith('places/')) {
+    // Google Places API uses maxHeight/maxWidth
+    const maxDimension = height ?? width;
+    return `/api/places-photo?name=${encodeURIComponent(photoName)}&maxHeight=${maxDimension}`;
+  }
+
+  // Supabase storage path - use render endpoint for image transformations
+  const params = new URLSearchParams();
+  params.set('width', width.toString());
+  if (height) params.set('height', height.toString());
+  params.set('quality', quality.toString());
+
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/render/image/public/${photoName}?${params.toString()}`;
+}

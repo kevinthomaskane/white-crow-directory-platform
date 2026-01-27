@@ -1,6 +1,7 @@
 'use server';
 
 import { type BusinessEditFormValues } from '@/components/sites/account-listings/business-edit-form';
+import { createServiceRoleClient } from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse, SiteBusinessOverrides } from '@/lib/types';
 
@@ -27,6 +28,18 @@ interface UpdateBusinessOverridesPayload {
   siteBusinessId: string;
   overrides: BusinessEditFormValues;
   originalAddress: string | null;
+  /** If true, generates a signed upload URL for an image */
+  hasNewImage?: boolean;
+  /** Required when hasNewImage is true */
+  siteDomain?: string;
+}
+
+interface UpdateBusinessOverridesResult {
+  updated: true;
+  /** Signed URL to upload the image to (only present when hasNewImage was true) */
+  imageUploadUrl?: string;
+  /** Storage path for the image (only present when hasNewImage was true) */
+  imagePath?: string;
 }
 
 async function geocodeAddress(address: string): Promise<{
@@ -105,8 +118,14 @@ async function geocodeAddress(address: string): Promise<{
 
 export async function updateBusinessOverrides(
   payload: UpdateBusinessOverridesPayload
-): Promise<ActionsResponse<{ updated: true }>> {
-  const { siteBusinessId, overrides, originalAddress } = payload;
+): Promise<ActionsResponse<UpdateBusinessOverridesResult>> {
+  const {
+    siteBusinessId,
+    overrides,
+    originalAddress,
+    hasNewImage,
+    siteDomain,
+  } = payload;
 
   if (!siteBusinessId) {
     return { ok: false, error: 'Missing site business ID.' };
@@ -135,6 +154,7 @@ export async function updateBusinessOverrides(
       id,
       site_id,
       claimed_by,
+      plan,
       overrides,
       business:businesses!inner(
         id,
@@ -161,7 +181,9 @@ export async function updateBusinessOverrides(
     (siteBusiness.overrides as SiteBusinessOverrides) || {};
   const newOverrides: SiteBusinessOverrides = { ...existingOverrides };
 
-  // Update simple fields
+  const isPro = Boolean(siteBusiness.plan);
+
+  // Update free tier fields
   if (overrides.name !== undefined) {
     newOverrides.name = overrides.name;
   }
@@ -173,6 +195,86 @@ export async function updateBusinessOverrides(
   }
   if (overrides.hours !== undefined) {
     newOverrides.hours = overrides.hours;
+  }
+
+  // Update pro tier fields (only if user has a plan)
+  if (overrides.editorial_summary !== undefined) {
+    if (!isPro && overrides.editorial_summary) {
+      return {
+        ok: false,
+        error:
+          'A Pro subscription is required to customize your business description.',
+      };
+    }
+    newOverrides.editorial_summary = isPro ? overrides.editorial_summary : null;
+  }
+
+  // Handle image upload if requested
+  let imageUploadUrl: string | undefined;
+  let imagePath: string | undefined;
+
+  if (hasNewImage) {
+    if (!isPro) {
+      return {
+        ok: false,
+        error: 'A Pro subscription is required to upload custom images.',
+      };
+    }
+
+    if (!siteDomain) {
+      return {
+        ok: false,
+        error: 'Site domain is required for image upload.',
+      };
+    }
+
+    // Use service role client for storage operations
+    const serviceClient = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const bucketName = siteDomain;
+
+    // Check if bucket exists, create if not
+    const { data: buckets } = await serviceClient.storage.listBuckets();
+    const bucketExists = buckets?.some((b) => b.name === bucketName);
+
+    if (!bucketExists) {
+      const { error: createError } = await serviceClient.storage.createBucket(
+        bucketName,
+        { public: true }
+      );
+
+      if (createError) {
+        return {
+          ok: false,
+          error: `Failed to create storage bucket: ${createError.message}`,
+        };
+      }
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `business-media/${siteBusinessId}/main-${timestamp}`;
+
+    // Generate signed upload URL (valid for 5 minutes)
+    const { data: uploadData, error: uploadError } = await serviceClient.storage
+      .from(bucketName)
+      .createSignedUploadUrl(filename);
+
+    if (uploadError || !uploadData) {
+      return {
+        ok: false,
+        error: `Failed to generate upload URL: ${uploadError?.message}`,
+      };
+    }
+
+    imagePath = `${bucketName}/${filename}`;
+    imageUploadUrl = uploadData.signedUrl;
+
+    // Set the image path in overrides
+    newOverrides.main_photo_name = imagePath;
   }
 
   // Handle address update - requires geocoding
@@ -226,7 +328,8 @@ export async function updateBusinessOverrides(
     } else {
       return {
         ok: false,
-        error: 'Could not determine the city from the address. Please enter a complete address.',
+        error:
+          'Could not determine the city from the address. Please enter a complete address.',
       };
     }
 
@@ -254,5 +357,12 @@ export async function updateBusinessOverrides(
     return { ok: false, error: 'Failed to update business. Please try again.' };
   }
 
-  return { ok: true, data: { updated: true } };
+  return {
+    ok: true,
+    data: {
+      updated: true,
+      ...(imageUploadUrl && { imageUploadUrl }),
+      ...(imagePath && { imagePath }),
+    },
+  };
 }

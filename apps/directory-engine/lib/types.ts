@@ -110,6 +110,9 @@ type Business = Database['public']['Tables']['businesses']['Row'];
 /**
  * User-provided overrides for business data stored in site_businesses.overrides
  * These take precedence over base business data when displaying
+ *
+ * Free tier: name, website, phone, hours, address fields
+ * Pro tier: editorial_summary, main_photo_name
  */
 export type SiteBusinessOverrides = Partial<
   Pick<
@@ -123,6 +126,8 @@ export type SiteBusinessOverrides = Partial<
     | 'city'
     | 'state'
     | 'postal_code'
+    | 'editorial_summary'
+    | 'main_photo_name'
   >
 >;
 type SiteBusiness = Database['public']['Tables']['site_businesses']['Row'];

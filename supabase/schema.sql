@@ -299,6 +299,41 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."site_business_media" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "site_business_id" "uuid" NOT NULL,
+    "type" "text" NOT NULL,
+    "file_path" "text",
+    "embed_url" "text",
+    "sort_order" integer DEFAULT 0 NOT NULL,
+    "alt_text" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_by" "uuid",
+    CONSTRAINT "media_source_check" CHECK (((("type" = 'image'::"text") AND ("file_path" IS NOT NULL) AND ("embed_url" IS NULL)) OR (("type" = 'video'::"text") AND ("embed_url" IS NOT NULL) AND ("file_path" IS NULL)))),
+    CONSTRAINT "site_business_media_type_check" CHECK (("type" = ANY (ARRAY['image'::"text", 'video'::"text"])))
+);
+
+
+ALTER TABLE "public"."site_business_media" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."site_business_reviews" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "site_business_id" "uuid" NOT NULL,
+    "author_name" "text" NOT NULL,
+    "author_image_url" "text",
+    "rating" integer,
+    "text" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_by" "uuid",
+    "is_verified" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "site_business_reviews_rating_check" CHECK ((("rating" >= 1) AND ("rating" <= 5)))
+);
+
+
+ALTER TABLE "public"."site_business_reviews" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."site_businesses" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -460,6 +495,16 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."site_business_media"
+    ADD CONSTRAINT "site_business_media_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."site_business_reviews"
+    ADD CONSTRAINT "site_business_reviews_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."site_businesses"
     ADD CONSTRAINT "site_businesses_business_site_unique" UNIQUE ("business_id", "site_id");
 
@@ -525,6 +570,22 @@ CREATE INDEX "idx_business_submissions_pending" ON "public"."business_submission
 
 
 CREATE INDEX "idx_business_submissions_site_status" ON "public"."business_submissions" USING "btree" ("site_id", "status");
+
+
+
+CREATE INDEX "idx_site_business_media_created_by" ON "public"."site_business_media" USING "btree" ("created_by") WHERE ("created_by" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_site_business_media_site_business_id" ON "public"."site_business_media" USING "btree" ("site_business_id", "sort_order");
+
+
+
+CREATE INDEX "idx_site_business_reviews_created_by" ON "public"."site_business_reviews" USING "btree" ("created_by") WHERE ("created_by" IS NOT NULL);
+
+
+
+CREATE INDEX "idx_site_business_reviews_site_business_id" ON "public"."site_business_reviews" USING "btree" ("site_business_id");
 
 
 
@@ -598,6 +659,26 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."site_business_media"
+    ADD CONSTRAINT "site_business_media_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."site_business_media"
+    ADD CONSTRAINT "site_business_media_site_business_id_fkey" FOREIGN KEY ("site_business_id") REFERENCES "public"."site_businesses"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."site_business_reviews"
+    ADD CONSTRAINT "site_business_reviews_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."site_business_reviews"
+    ADD CONSTRAINT "site_business_reviews_site_business_id_fkey" FOREIGN KEY ("site_business_id") REFERENCES "public"."site_businesses"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."site_businesses"
     ADD CONSTRAINT "site_businesses_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE CASCADE;
 
@@ -643,11 +724,43 @@ ALTER TABLE ONLY "public"."sites"
 
 
 
+CREATE POLICY "Admins can manage all site business media" ON "public"."site_business_media" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can manage all site business reviews" ON "public"."site_business_reviews" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
+
+
+
 CREATE POLICY "Admins can manage business submissions" ON "public"."business_submissions" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
+CREATE POLICY "Anyone can read site business reviews" ON "public"."site_business_reviews" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
 CREATE POLICY "Anyone can submit a business" ON "public"."business_submissions" FOR INSERT TO "authenticated", "anon" WITH CHECK (true);
+
+
+
+CREATE POLICY "Anyone can view site business media" ON "public"."site_business_media" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "Business owners can manage their media" ON "public"."site_business_media" TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses" "sb"
+  WHERE (("sb"."id" = "site_business_media"."site_business_id") AND ("sb"."claimed_by" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses" "sb"
+  WHERE (("sb"."id" = "site_business_media"."site_business_id") AND ("sb"."claimed_by" = "auth"."uid"())))));
+
+
+
+CREATE POLICY "Business owners can manage their reviews" ON "public"."site_business_reviews" TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses" "sb"
+  WHERE (("sb"."id" = "site_business_reviews"."site_business_id") AND ("sb"."claimed_by" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."site_businesses" "sb"
+  WHERE (("sb"."id" = "site_business_reviews"."site_business_id") AND ("sb"."claimed_by" = "auth"."uid"())))));
 
 
 
@@ -744,6 +857,12 @@ ALTER TABLE "public"."jobs" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."site_business_media" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."site_business_reviews" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."site_businesses" ENABLE ROW LEVEL SECURITY;
@@ -1070,6 +1189,18 @@ GRANT ALL ON TABLE "public"."jobs" TO "service_role";
 GRANT ALL ON TABLE "public"."profiles" TO "anon";
 GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."site_business_media" TO "anon";
+GRANT ALL ON TABLE "public"."site_business_media" TO "authenticated";
+GRANT ALL ON TABLE "public"."site_business_media" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."site_business_reviews" TO "anon";
+GRANT ALL ON TABLE "public"."site_business_reviews" TO "authenticated";
+GRANT ALL ON TABLE "public"."site_business_reviews" TO "service_role";
 
 
 

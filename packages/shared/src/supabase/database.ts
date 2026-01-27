@@ -462,6 +462,108 @@ export type Database = {
         }
         Relationships: []
       }
+      site_business_media: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          created_by: string | null
+          embed_url: string | null
+          file_path: string | null
+          id: string
+          site_business_id: string
+          sort_order: number
+          type: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          embed_url?: string | null
+          file_path?: string | null
+          id?: string
+          site_business_id: string
+          sort_order?: number
+          type: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          embed_url?: string | null
+          file_path?: string | null
+          id?: string
+          site_business_id?: string
+          sort_order?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_business_media_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_business_media_site_business_id_fkey"
+            columns: ["site_business_id"]
+            isOneToOne: false
+            referencedRelation: "site_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_business_reviews: {
+        Row: {
+          author_image_url: string | null
+          author_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_verified: boolean
+          rating: number | null
+          site_business_id: string
+          text: string | null
+        }
+        Insert: {
+          author_image_url?: string | null
+          author_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_verified?: boolean
+          rating?: number | null
+          site_business_id: string
+          text?: string | null
+        }
+        Update: {
+          author_image_url?: string | null
+          author_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_verified?: boolean
+          rating?: number | null
+          site_business_id?: string
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_business_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_business_reviews_site_business_id_fkey"
+            columns: ["site_business_id"]
+            isOneToOne: false
+            referencedRelation: "site_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_businesses: {
         Row: {
           business_id: string
