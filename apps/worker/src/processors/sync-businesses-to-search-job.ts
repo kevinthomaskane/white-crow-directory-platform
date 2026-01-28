@@ -203,20 +203,7 @@ export async function handleSyncBusinessesToSearchJob(
 
     const documents: BusinessDocument[] = batch
       .map((sb) => {
-        const biz = sb.business as {
-          id: string;
-          name: string;
-          description: string | null;
-          editorial_summary: string | null;
-          formatted_address: string | null;
-          city: string | null;
-          state: string | null;
-          phone: string | null;
-          website: string | null;
-          latitude: number | null;
-          longitude: number | null;
-        } | null;
-
+        const biz = sb.business;
         if (!biz) return null;
 
         const categories = categoryMap.get(biz.id) || { ids: [], names: [] };
@@ -227,9 +214,9 @@ export async function handleSyncBusinessesToSearchJob(
           business_id: biz.id,
           name: biz.name,
           description: biz.description || biz.editorial_summary || undefined,
-          formatted_address: biz.formatted_address || undefined,
-          city: biz.city || undefined,
-          state: biz.state || undefined,
+          formatted_address: biz.formatted_address ?? undefined,
+          city: biz.city ?? undefined,
+          state: biz.state ?? undefined,
           phone: biz.phone || undefined,
           website: biz.website || undefined,
           site_ids: siteIds,

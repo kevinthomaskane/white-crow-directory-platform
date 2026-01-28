@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { BusinessEditForm } from '@/components/sites/account-listings/business-edit-form';
+import { BusinessMediaSection } from '@/components/sites/account-listings/business-media-section';
 import type { SiteBusinessOverrides } from '@/lib/types';
 
 interface Props {
@@ -42,11 +43,23 @@ export default async function ManageListingPage({ params }: Props) {
         hours,
         editorial_summary,
         main_photo_name
+      ),
+      media:site_business_media(
+        id,
+        type,
+        file_path,
+        embed_url,
+        alt_text,
+        sort_order
       )
     `
     )
     .eq('id', id)
     .eq('claimed_by', user.id)
+    .order('sort_order', {
+      referencedTable: 'site_business_media',
+      ascending: true,
+    })
     .single();
 
   if (!siteBusiness) {
@@ -87,9 +100,12 @@ export default async function ManageListingPage({ params }: Props) {
         )}
 
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-medium mb-6">Edit Business Information</h2>
+          <h2 className="text-lg font-medium mb-6">
+            Edit Business Information
+          </h2>
           {(() => {
-            const overrides = siteBusiness.overrides as SiteBusinessOverrides | null;
+            const overrides =
+              siteBusiness.overrides as SiteBusinessOverrides | null;
             return (
               <BusinessEditForm
                 siteBusinessId={siteBusiness.id}
@@ -99,15 +115,39 @@ export default async function ManageListingPage({ params }: Props) {
                   name: overrides?.name ?? siteBusiness.business.name,
                   website: overrides?.website ?? siteBusiness.business.website,
                   phone: overrides?.phone ?? siteBusiness.business.phone,
-                  formatted_address: overrides?.formatted_address ?? siteBusiness.business.formatted_address,
-                  hours: (overrides?.hours ?? siteBusiness.business.hours) as { weekday_text?: string[] } | null,
-                  editorial_summary: overrides?.editorial_summary ?? siteBusiness.business.editorial_summary,
-                  main_photo_name: overrides?.main_photo_name ?? siteBusiness.business.main_photo_name,
+                  formatted_address:
+                    overrides?.formatted_address ??
+                    siteBusiness.business.formatted_address,
+                  hours: (overrides?.hours ?? siteBusiness.business.hours) as {
+                    weekday_text?: string[];
+                  } | null,
+                  editorial_summary:
+                    overrides?.editorial_summary ??
+                    siteBusiness.business.editorial_summary,
+                  main_photo_name:
+                    overrides?.main_photo_name ??
+                    siteBusiness.business.main_photo_name,
                 }}
               />
             );
           })()}
         </div>
+
+        <BusinessMediaSection
+          siteBusinessId={siteBusiness.id}
+          siteDomain={siteBusiness.site.domain}
+          plan={siteBusiness.plan}
+          initialMedia={siteBusiness.media.filter(
+            (m): m is typeof m & { file_path: string } =>
+              m.type === 'image' && m.file_path !== null
+          )}
+          initialVideo={
+            siteBusiness.media.find(
+              (m): m is typeof m & { embed_url: string } =>
+                m.type === 'video' && m.embed_url !== null
+            ) ?? null
+          }
+        />
       </div>
     </div>
   );

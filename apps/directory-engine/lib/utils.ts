@@ -122,3 +122,41 @@ export function getBusinessImageUrl(
 
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/render/image/public/${photoName}?${params.toString()}`;
 }
+
+/**
+ * Parses a YouTube or Vimeo URL and extracts the video ID.
+ */
+function parseVideoUrl(
+  url: string
+): { provider: 'youtube' | 'vimeo'; videoId: string } | null {
+  // YouTube patterns
+  const youtubeMatch = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+  );
+  if (youtubeMatch) {
+    return { provider: 'youtube', videoId: youtubeMatch[1] };
+  }
+
+  // Vimeo patterns
+  const vimeoMatch = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+  if (vimeoMatch) {
+    return { provider: 'vimeo', videoId: vimeoMatch[1] };
+  }
+
+  return null;
+}
+
+/**
+ * Gets the thumbnail URL for a YouTube or Vimeo video.
+ */
+export function getVideoThumbnailUrl(embedUrl: string): string | null {
+  const parsed = parseVideoUrl(embedUrl);
+  if (!parsed) return null;
+
+  if (parsed.provider === 'youtube') {
+    return `https://img.youtube.com/vi/${parsed.videoId}/hqdefault.jpg`;
+  }
+
+  // Vimeo - use vumbnail.com as a simple thumbnail service
+  return `https://vumbnail.com/${parsed.videoId}.jpg`;
+}

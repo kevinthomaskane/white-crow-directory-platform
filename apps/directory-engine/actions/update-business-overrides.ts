@@ -1,7 +1,11 @@
 'use server';
 
 import { type BusinessEditFormValues } from '@/components/sites/account-listings/business-edit-form';
-import { createServiceRoleClient } from '@white-crow/shared';
+import {
+  createServiceRoleClient,
+  createTypesenseClient,
+  BUSINESSES_COLLECTION,
+} from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse, SiteBusinessOverrides } from '@/lib/types';
 
@@ -50,7 +54,7 @@ async function geocodeAddress(address: string): Promise<{
   street_address: string | null;
   postal_code: string | null;
 } | null> {
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
   if (!mapboxToken) {
     console.error('Mapbox access token not configured');
@@ -355,6 +359,38 @@ export async function updateBusinessOverrides(
   if (updateError) {
     console.error('Error updating business overrides:', updateError);
     return { ok: false, error: 'Failed to update business. Please try again.' };
+  }
+
+  // Sync changes to Typesense search index
+  const searchUpdates: Record<string, string | undefined> = {};
+
+  if (overrides.name !== undefined) {
+    searchUpdates.name = overrides.name;
+  }
+
+  if (addressChanged && overrides.formatted_address) {
+    searchUpdates.city = newOverrides.city ?? undefined;
+    searchUpdates.state = newOverrides.state ?? undefined;
+    searchUpdates.formatted_address = newOverrides.formatted_address ?? undefined;
+  }
+
+  if (Object.keys(searchUpdates).length > 0) {
+    try {
+      const typesense = createTypesenseClient({
+        apiKey: process.env.TYPESENSE_API_KEY!,
+        host: process.env.TYPESENSE_HOST!,
+        port: 8108,
+        protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
+      });
+
+      await typesense
+        .collections(BUSINESSES_COLLECTION)
+        .documents(siteBusiness.business.id)
+        .update(searchUpdates);
+    } catch (err) {
+      // Log but don't fail the request - DB update succeeded
+      console.error('Failed to sync to search:', err);
+    }
   }
 
   return {
