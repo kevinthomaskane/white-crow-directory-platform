@@ -227,8 +227,6 @@ export type Database = {
           city: string | null
           city_id: string | null
           created_at: string | null
-          description: string | null
-          editorial_summary: string | null
           formatted_address: string | null
           hours: Json | null
           id: string
@@ -249,8 +247,6 @@ export type Database = {
           city?: string | null
           city_id?: string | null
           created_at?: string | null
-          description?: string | null
-          editorial_summary?: string | null
           formatted_address?: string | null
           hours?: Json | null
           id?: string
@@ -271,8 +267,6 @@ export type Database = {
           city?: string | null
           city_id?: string | null
           created_at?: string | null
-          description?: string | null
-          editorial_summary?: string | null
           formatted_address?: string | null
           hours?: Json | null
           id?: string
@@ -570,9 +564,10 @@ export type Database = {
           claimed_at: string | null
           claimed_by: string | null
           created_at: string
+          description: string | null
           id: string
           is_claimed: boolean | null
-          overrides: Json | null
+          main_photo: string | null
           plan: string | null
           site_id: string
           stripe_customer_id: string | null
@@ -588,9 +583,10 @@ export type Database = {
           claimed_at?: string | null
           claimed_by?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           is_claimed?: boolean | null
-          overrides?: Json | null
+          main_photo?: string | null
           plan?: string | null
           site_id: string
           stripe_customer_id?: string | null
@@ -606,9 +602,10 @@ export type Database = {
           claimed_at?: string | null
           claimed_by?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           is_claimed?: boolean | null
-          overrides?: Json | null
+          main_photo?: string | null
           plan?: string | null
           site_id?: string
           stripe_customer_id?: string | null

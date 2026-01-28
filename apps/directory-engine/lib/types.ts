@@ -126,7 +126,6 @@ export type SiteBusinessOverrides = Partial<
     | 'city'
     | 'state'
     | 'postal_code'
-    | 'editorial_summary'
     | 'main_photo_name'
   >
 >;
@@ -139,7 +138,6 @@ export type BusinessCardData = Pick<
   | 'id'
   | 'name'
   | 'city'
-  | 'editorial_summary'
   | 'main_photo_name'
   | 'phone'
   | 'website'
@@ -186,14 +184,12 @@ export type BusinessDetailData = Pick<
   | 'formatted_address'
   | 'phone'
   | 'website'
-  | 'description'
-  | 'editorial_summary'
   | 'main_photo_name'
   | 'hours'
   | 'latitude'
   | 'longitude'
 > &
-  Pick<SiteBusiness, 'is_claimed'> & {
+  Pick<SiteBusiness, 'is_claimed' | 'description'> & {
     site_business_id: string;
     categories: CategoryData[];
     reviewSources: Pick<

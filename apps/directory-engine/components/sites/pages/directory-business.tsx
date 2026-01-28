@@ -192,7 +192,11 @@ export async function DirectoryBusinessPage({
                 {getBusinessImageUrl(business.main_photo_name) ? (
                   <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4">
                     <Image
-                      src={getBusinessImageUrl(business.main_photo_name, { width: 1200 })!}
+                      src={
+                        getBusinessImageUrl(business.main_photo_name, {
+                          width: 1200,
+                        })!
+                      }
                       alt={business.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 66vw"
@@ -206,12 +210,7 @@ export async function DirectoryBusinessPage({
                   </div>
                 )}
 
-                {/* Editorial Summary */}
-                {business.editorial_summary ? (
-                  <p className="text-muted-foreground leading-relaxed">
-                    {business.editorial_summary}
-                  </p>
-                ) : business.description ? (
+                {business.description ? (
                   <p className="text-muted-foreground leading-relaxed">
                     {business.description}
                   </p>

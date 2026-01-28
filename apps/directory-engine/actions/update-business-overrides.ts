@@ -5,9 +5,10 @@ import {
   createServiceRoleClient,
   createTypesenseClient,
   BUSINESSES_COLLECTION,
+  type BusinessDocument,
 } from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
-import type { ActionsResponse, SiteBusinessOverrides } from '@/lib/types';
+import type { ActionsResponse } from '@/lib/types';
 
 interface MapboxFeature {
   place_name: string;
@@ -28,9 +29,9 @@ interface MapboxGeocodeResponse {
   features: MapboxFeature[];
 }
 
-interface UpdateBusinessOverridesPayload {
+interface UpdateBusinessPayload {
   siteBusinessId: string;
-  overrides: BusinessEditFormValues;
+  updates: BusinessEditFormValues;
   originalAddress: string | null;
   /** If true, generates a signed upload URL for an image */
   hasNewImage?: boolean;
@@ -38,7 +39,7 @@ interface UpdateBusinessOverridesPayload {
   siteDomain?: string;
 }
 
-interface UpdateBusinessOverridesResult {
+interface UpdateBusinessResult {
   updated: true;
   /** Signed URL to upload the image to (only present when hasNewImage was true) */
   imageUploadUrl?: string;
@@ -121,15 +122,10 @@ async function geocodeAddress(address: string): Promise<{
 }
 
 export async function updateBusinessOverrides(
-  payload: UpdateBusinessOverridesPayload
-): Promise<ActionsResponse<UpdateBusinessOverridesResult>> {
-  const {
-    siteBusinessId,
-    overrides,
-    originalAddress,
-    hasNewImage,
-    siteDomain,
-  } = payload;
+  payload: UpdateBusinessPayload
+): Promise<ActionsResponse<UpdateBusinessResult>> {
+  const { siteBusinessId, updates, originalAddress, hasNewImage, siteDomain } =
+    payload;
 
   if (!siteBusinessId) {
     return { ok: false, error: 'Missing site business ID.' };
@@ -159,7 +155,6 @@ export async function updateBusinessOverrides(
       site_id,
       claimed_by,
       plan,
-      overrides,
       business:businesses!inner(
         id,
         formatted_address
@@ -180,37 +175,127 @@ export async function updateBusinessOverrides(
     };
   }
 
-  // Build the new overrides object
-  const existingOverrides =
-    (siteBusiness.overrides as SiteBusinessOverrides) || {};
-  const newOverrides: SiteBusinessOverrides = { ...existingOverrides };
-
   const isPro = Boolean(siteBusiness.plan);
 
-  // Update free tier fields
-  if (overrides.name !== undefined) {
-    newOverrides.name = overrides.name;
+  // Build updates for the businesses table
+  const businessUpdates: Record<string, unknown> = {};
+
+  if (updates.name !== undefined) {
+    businessUpdates.name = updates.name;
   }
-  if (overrides.website !== undefined) {
-    newOverrides.website = overrides.website;
+  if (updates.website !== undefined) {
+    businessUpdates.website = updates.website;
   }
-  if (overrides.phone !== undefined) {
-    newOverrides.phone = overrides.phone;
+  if (updates.phone !== undefined) {
+    businessUpdates.phone = updates.phone;
   }
-  if (overrides.hours !== undefined) {
-    newOverrides.hours = overrides.hours;
+  if (updates.hours !== undefined) {
+    businessUpdates.hours = updates.hours;
   }
 
-  // Update pro tier fields (only if user has a plan)
-  if (overrides.editorial_summary !== undefined) {
-    if (!isPro && overrides.editorial_summary) {
+  // Handle address update - requires geocoding
+  const addressChanged =
+    updates.formatted_address !== undefined &&
+    updates.formatted_address !== originalAddress;
+
+  if (addressChanged && updates.formatted_address) {
+    const geocodeResult = await geocodeAddress(updates.formatted_address);
+
+    if (!geocodeResult) {
+      return {
+        ok: false,
+        error:
+          'Could not verify the address. Please check the address and try again.',
+      };
+    }
+
+    // Verify the state matches the site's state
+    const { data: site } = await supabase
+      .from('sites')
+      .select('state:states!inner(code, name)')
+      .eq('id', siteBusiness.site_id)
+      .single();
+
+    const siteState = site?.state as { code: string; name: string } | null;
+
+    if (siteState && geocodeResult.state !== siteState.code) {
+      return {
+        ok: false,
+        error: `This directory only covers ${siteState.name}. Please enter an address in ${siteState.name}.`,
+      };
+    }
+
+    // Verify the city exists in site_cities and get the city_id
+    let cityId: string | null = null;
+
+    if (geocodeResult.city) {
+      const { data: siteCity } = await supabase
+        .from('site_cities')
+        .select('city:cities!inner(id, name, state_id)')
+        .eq('site_id', siteBusiness.site_id)
+        .ilike('city.name', geocodeResult.city)
+        .limit(1)
+        .single();
+
+      if (!siteCity) {
+        return {
+          ok: false,
+          error: `The city "${geocodeResult.city}" is not available for this directory. Please use an address within a supported city.`,
+        };
+      }
+
+      cityId = siteCity.city.id;
+    } else {
+      return {
+        ok: false,
+        error:
+          'Could not determine the city from the address. Please enter a complete address.',
+      };
+    }
+
+    // Add address fields to business updates
+    businessUpdates.formatted_address = updates.formatted_address;
+    businessUpdates.street_address = geocodeResult.street_address;
+    businessUpdates.city = geocodeResult.city;
+    businessUpdates.state = geocodeResult.state;
+    businessUpdates.postal_code = geocodeResult.postal_code;
+    businessUpdates.latitude = geocodeResult.latitude;
+    businessUpdates.longitude = geocodeResult.longitude;
+    businessUpdates.city_id = cityId;
+  } else if (updates.formatted_address !== undefined) {
+    // Address cleared or unchanged
+    businessUpdates.formatted_address = updates.formatted_address;
+  }
+
+  // Update businesses table if there are changes
+  if (Object.keys(businessUpdates).length > 0) {
+    const { error: businessUpdateError } = await supabase
+      .from('businesses')
+      .update(businessUpdates)
+      .eq('id', siteBusiness.business.id);
+
+    if (businessUpdateError) {
+      console.error('Error updating business:', businessUpdateError);
+      return {
+        ok: false,
+        error: 'Failed to update business. Please try again.',
+      };
+    }
+  }
+
+  // Build updates for site_businesses table (pro enrichments)
+  const siteBusinessUpdates: Record<string, unknown> = {};
+
+  // Handle description (pro feature)
+  if (updates.description !== undefined) {
+    if (!isPro && updates.description) {
       return {
         ok: false,
         error:
           'A Pro subscription is required to customize your business description.',
       };
     }
-    newOverrides.editorial_summary = isPro ? overrides.editorial_summary : null;
+    siteBusinessUpdates.description = isPro ? updates.description : null;
   }
 
   // Handle image upload if requested
@@ -277,104 +362,36 @@ export async function updateBusinessOverrides(
     imagePath = `${bucketName}/${filename}`;
     imageUploadUrl = uploadData.signedUrl;
 
-    // Set the image path in overrides
-    newOverrides.main_photo_name = imagePath;
+    // Set the image path in site_business
+    siteBusinessUpdates.main_photo = imagePath;
   }
 
-  // Handle address update - requires geocoding
-  const addressChanged =
-    overrides.formatted_address !== undefined &&
-    overrides.formatted_address !== originalAddress;
+  // Update site_businesses table if there are changes
+  if (Object.keys(siteBusinessUpdates).length > 0) {
+    const { error: siteBusinessUpdateError } = await supabase
+      .from('site_businesses')
+      .update(siteBusinessUpdates)
+      .eq('id', siteBusinessId);
 
-  if (addressChanged && overrides.formatted_address) {
-    const geocodeResult = await geocodeAddress(overrides.formatted_address);
-
-    if (!geocodeResult) {
+    if (siteBusinessUpdateError) {
+      console.error('Error updating site_business:', siteBusinessUpdateError);
       return {
         ok: false,
-        error:
-          'Could not verify the address. Please check the address and try again.',
+        error: 'Failed to update business. Please try again.',
       };
     }
-
-    // Verify the state matches the site's state
-    const { data: site } = await supabase
-      .from('sites')
-      .select('state:states!inner(code, name)')
-      .eq('id', siteBusiness.site_id)
-      .single();
-
-    const siteState = site?.state as { code: string; name: string } | null;
-
-    if (siteState && geocodeResult.state !== siteState.code) {
-      return {
-        ok: false,
-        error: `This directory only covers ${siteState.name}. Please enter an address in ${siteState.name}.`,
-      };
-    }
-
-    // Verify the city exists in site_cities (required for the business to have a valid listing page)
-    if (geocodeResult.city) {
-      const { data: siteCity } = await supabase
-        .from('site_cities')
-        .select('city:cities!inner(name, state_id)')
-        .eq('site_id', siteBusiness.site_id)
-        .ilike('city.name', geocodeResult.city)
-        .limit(1)
-        .single();
-
-      if (!siteCity) {
-        return {
-          ok: false,
-          error: `The city "${geocodeResult.city}" is not available for this directory. Please use an address within a supported city.`,
-        };
-      }
-    } else {
-      return {
-        ok: false,
-        error:
-          'Could not determine the city from the address. Please enter a complete address.',
-      };
-    }
-
-    // Update address-related overrides
-    newOverrides.formatted_address = overrides.formatted_address;
-    newOverrides.street_address = geocodeResult.street_address;
-    newOverrides.city = geocodeResult.city;
-    newOverrides.state = geocodeResult.state;
-    newOverrides.postal_code = geocodeResult.postal_code;
-  } else if (overrides.formatted_address !== undefined) {
-    // Address cleared or unchanged
-    newOverrides.formatted_address = overrides.formatted_address;
   }
 
-  // Update site_businesses with new overrides
-  const { error: updateError } = await supabase
-    .from('site_businesses')
-    .update({
-      overrides: Object.keys(newOverrides).length > 0 ? newOverrides : null,
-    })
-    .eq('id', siteBusinessId);
+  // Sync changes to Typesense search index if searchable fields changed
+  const searchableFieldsChanged =
+    businessUpdates.name !== undefined ||
+    businessUpdates.formatted_address !== undefined ||
+    businessUpdates.city !== undefined ||
+    businessUpdates.state !== undefined ||
+    businessUpdates.phone !== undefined ||
+    businessUpdates.website !== undefined;
 
-  if (updateError) {
-    console.error('Error updating business overrides:', updateError);
-    return { ok: false, error: 'Failed to update business. Please try again.' };
-  }
-
-  // Sync changes to Typesense search index
-  const searchUpdates: Record<string, string | undefined> = {};
-
-  if (overrides.name !== undefined) {
-    searchUpdates.name = overrides.name;
-  }
-
-  if (addressChanged && overrides.formatted_address) {
-    searchUpdates.city = newOverrides.city ?? undefined;
-    searchUpdates.state = newOverrides.state ?? undefined;
-    searchUpdates.formatted_address = newOverrides.formatted_address ?? undefined;
-  }
-
-  if (Object.keys(searchUpdates).length > 0) {
+  if (searchableFieldsChanged) {
     try {
       const typesense = createTypesenseClient({
         apiKey: process.env.TYPESENSE_API_KEY!,
@@ -383,13 +400,50 @@ export async function updateBusinessOverrides(
         protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
       });
 
+      // Build partial update with only the changed fields
+      const typesenseUpdate: Partial<BusinessDocument> & { id: string } = {
+        id: siteBusiness.business.id,
+      };
+
+      if (businessUpdates.name !== undefined) {
+        typesenseUpdate.name = businessUpdates.name as string;
+      }
+      if (businessUpdates.formatted_address !== undefined) {
+        typesenseUpdate.formatted_address =
+          (businessUpdates.formatted_address as string) || undefined;
+      }
+      if (businessUpdates.city !== undefined) {
+        typesenseUpdate.city = (businessUpdates.city as string) || undefined;
+      }
+      if (businessUpdates.state !== undefined) {
+        typesenseUpdate.state = (businessUpdates.state as string) || undefined;
+      }
+      if (businessUpdates.phone !== undefined) {
+        typesenseUpdate.phone = (businessUpdates.phone as string) || undefined;
+      }
+      if (businessUpdates.website !== undefined) {
+        typesenseUpdate.website =
+          (businessUpdates.website as string) || undefined;
+      }
+
+      // Update location if coordinates changed
+      if (
+        businessUpdates.latitude !== undefined &&
+        businessUpdates.longitude !== undefined
+      ) {
+        typesenseUpdate.location = [
+          businessUpdates.latitude as number,
+          businessUpdates.longitude as number,
+        ];
+      }
+
       await typesense
-        .collections(BUSINESSES_COLLECTION)
+        .collections<BusinessDocument>(BUSINESSES_COLLECTION)
         .documents(siteBusiness.business.id)
-        .update(searchUpdates);
-    } catch (err) {
-      // Log but don't fail the request - DB update succeeded
-      console.error('Failed to sync to search:', err);
+        .update(typesenseUpdate);
+    } catch (typesenseError) {
+      // Log error but don't fail the request - Supabase is the source of truth
+      console.error('Failed to sync business to Typesense:', typesenseError);
     }
   }
 

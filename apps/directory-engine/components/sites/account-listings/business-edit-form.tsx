@@ -59,7 +59,7 @@ export const businessEditSchema = z.object({
     .transform((val) => val || null),
   hours: hoursSchema.nullable(),
   // Pro fields
-  editorial_summary: z
+  description: z
     .string()
     .max(500, { message: 'Description must be 500 characters or less.' })
     .or(z.literal(''))
@@ -79,7 +79,7 @@ interface BusinessEditFormProps {
     phone: string | null;
     formatted_address: string | null;
     hours: { weekday_text?: string[] } | null;
-    editorial_summary: string | null;
+    description: string | null;
     main_photo_name: string | null;
   };
 }
@@ -158,7 +158,7 @@ export function BusinessEditForm({
       phone: defaultValues.phone ?? '',
       formatted_address: defaultValues.formatted_address ?? '',
       hours: defaultValues.hours,
-      editorial_summary: defaultValues.editorial_summary ?? '',
+      description: defaultValues.description ?? '',
     },
   });
 
@@ -217,13 +217,13 @@ export function BusinessEditForm({
 
       const result = await updateBusinessOverrides({
         siteBusinessId,
-        overrides: {
+        updates: {
           name: values.name,
           website: values.website,
           phone: values.phone,
           formatted_address: values.formatted_address,
           hours: values.hours,
-          editorial_summary: isPro ? values.editorial_summary : null,
+          description: isPro ? values.description : null,
         },
         originalAddress: defaultValues.formatted_address,
         hasNewImage,
@@ -385,7 +385,7 @@ export function BusinessEditForm({
 
           <FormField
             control={form.control}
-            name="editorial_summary"
+            name="description"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className={!isPro ? 'opacity-50' : ''}>

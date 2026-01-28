@@ -159,7 +159,6 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           longitude: placeDetails.location?.longitude || null,
           updated_at: new Date().toISOString(),
           raw: placeDetails,
-          editorial_summary: placeDetails.editorialSummary?.text || null,
           city,
           state,
           city_id: cityId,

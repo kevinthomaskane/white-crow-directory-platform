@@ -2,16 +2,61 @@ import {
   ReviewSource,
   type RefreshSiteBusinessesJobMeta,
   placeDetailsFieldMask,
+  parseAddressComponents,
   type Review,
 } from '@white-crow/shared';
 import { supabase } from '../lib/supabase/client';
-import type { BusinessReviewInsert, RefreshSiteBusinessesJob } from '../lib/types';
+import type {
+  BusinessReviewInsert,
+  RefreshSiteBusinessesJob,
+} from '../lib/types';
 import { markJobCompleted } from '../lib/update-job-status';
 import { fetchWithRetry } from '../lib/google-places';
 
 const PAGE_SIZE = 500; // Fetch businesses in pages
 const BATCH_SIZE = 10; // Process this many API calls at a time
 const BATCH_DELAY_MS = 500; // Delay between batches
+
+/**
+ * Creates a cached city lookup function that queries the database on demand
+ * and caches results for the duration of the job.
+ */
+function createCityLookupCache() {
+  const cache = new Map<string, string | null>();
+
+  return async function lookupCityId(
+    city: string,
+    state: string
+  ): Promise<string | null> {
+    const cityName = city?.trim().toLowerCase();
+    const stateName = state?.trim().toLowerCase();
+
+    if (!cityName || !stateName) return null;
+
+    const key = `${cityName}|${stateName}`;
+
+    if (cache.has(key)) {
+      return cache.get(key) || null;
+    }
+
+    // Query database for this city/state combination
+    const { data, error } = await supabase
+      .from('cities')
+      .select('id, states!inner(name)')
+      .ilike('name', cityName)
+      .ilike('states.name', stateName)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      cache.set(key, null);
+      return null;
+    }
+
+    cache.set(key, data.id);
+    return data.id;
+  };
+}
 
 export async function handleRefreshSiteBusinessesJob(
   job: RefreshSiteBusinessesJob
@@ -22,6 +67,7 @@ export async function handleRefreshSiteBusinessesJob(
   }
 
   const { siteId } = job.payload;
+  const lookupCityId = createCityLookupCache();
 
   console.log(`[Job ${job.id}] Starting refresh site businesses job`);
   console.log(`[Job ${job.id}] Site ID: ${siteId}`);
@@ -65,12 +111,13 @@ export async function handleRefreshSiteBusinessesJob(
       `[Job ${job.id}] Fetching businesses page (offset: ${pageOffset}, limit: ${PAGE_SIZE})`
     );
 
-    // Fetch a page of businesses with their place_ids
+    // Fetch a page of businesses with their place_ids and claim status
     const { data: siteBusinesses, error: fetchError } = await supabase
       .from('site_businesses')
       .select(
         `
         business_id,
+        claimed_by,
         business:businesses(id, place_id, name)
       `
       )
@@ -85,12 +132,15 @@ export async function handleRefreshSiteBusinessesJob(
       break;
     }
 
-    // Filter to only businesses with place_ids
+    // Filter to only businesses with place_ids, include claim status
     const businessesWithPlaceIds = siteBusinesses
-      .map((sb) => sb.business as { id: string; place_id: string | null; name: string } | null)
-      .filter((b): b is { id: string; place_id: string; name: string } =>
-        b !== null && b.place_id !== null
-      );
+      .filter((sb) => sb.business && sb.business.place_id)
+      .map((sb) => ({
+        id: sb.business!.id,
+        place_id: sb.business!.place_id!,
+        name: sb.business!.name,
+        isClaimed: sb.claimed_by !== null,
+      }));
 
     console.log(
       `[Job ${job.id}] Processing ${businessesWithPlaceIds.length} businesses with place_ids`
@@ -103,7 +153,7 @@ export async function handleRefreshSiteBusinessesJob(
       // Process batch concurrently
       const results = await Promise.allSettled(
         batch.map((business) =>
-          refreshBusiness(job.id, business, PLACES_API_KEY)
+          refreshBusiness(job.id, business, PLACES_API_KEY, lookupCityId)
         )
       );
 
@@ -165,8 +215,9 @@ export async function handleRefreshSiteBusinessesJob(
 
 async function refreshBusiness(
   jobId: string,
-  business: { id: string; place_id: string; name: string },
-  apiKey: string
+  business: { id: string; place_id: string; name: string; isClaimed: boolean },
+  apiKey: string,
+  lookupCityId: (city: string, state: string) => Promise<string | null>
 ): Promise<boolean> {
   console.log(
     `[Job ${jobId}] Refreshing "${business.name}" (${business.place_id})`
@@ -195,21 +246,44 @@ async function refreshBusiness(
   const placeDetails = await res.json();
 
   // Update business record
-  const { error: updateError } = await supabase
-    .from('businesses')
-    .update({
+  // For claimed businesses, only update non-user-editable fields (raw data, photo)
+  // For unclaimed businesses, update everything from Google Places
+  let businessUpdate;
+
+  if (business.isClaimed) {
+    businessUpdate = {
+      updated_at: new Date().toISOString(),
+      raw: placeDetails,
+      main_photo_name: placeDetails.photos?.[0]?.name || undefined,
+    };
+  } else {
+    const { streetAddress, city, state, postalCode } = parseAddressComponents(
+      placeDetails.addressComponents || []
+    );
+    const cityId = await lookupCityId(city, state);
+
+    businessUpdate = {
       name: placeDetails.displayName?.text || undefined,
       formatted_address: placeDetails.formattedAddress || undefined,
+      street_address: streetAddress || undefined,
+      city: city || undefined,
+      state: state || undefined,
+      postal_code: postalCode || undefined,
+      city_id: cityId,
       website: placeDetails.websiteUri || undefined,
       phone: placeDetails.nationalPhoneNumber || undefined,
       latitude: placeDetails.location?.latitude || undefined,
       longitude: placeDetails.location?.longitude || undefined,
       updated_at: new Date().toISOString(),
       raw: placeDetails,
-      editorial_summary: placeDetails.editorialSummary?.text || undefined,
       hours: placeDetails.regularOpeningHours || undefined,
       main_photo_name: placeDetails.photos?.[0]?.name || undefined,
-    })
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from('businesses')
+    .update(businessUpdate)
     .eq('id', business.id);
 
   if (updateError) {

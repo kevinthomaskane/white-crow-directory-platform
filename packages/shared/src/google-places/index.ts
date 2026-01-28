@@ -6,7 +6,6 @@ export const placeDetailsFieldMask = [
   'location',
   'websiteUri',
   'nationalPhoneNumber',
-  'editorialSummary',
   'regularOpeningHours',
   'photos',
   'rating',
@@ -61,7 +60,9 @@ export function parseAddressComponents(components: AddressComponent[]) {
   }
 
   return {
-    streetAddress: [result.streetNumber, result.route].filter(Boolean).join(' '),
+    streetAddress: [result.streetNumber, result.route]
+      .filter(Boolean)
+      .join(' '),
     city: result.city,
     state: result.state,
     postalCode: result.postalCode,

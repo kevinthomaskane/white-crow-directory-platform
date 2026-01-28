@@ -104,13 +104,6 @@ export function BusinessCard({ business, href, className }: BusinessCardProps) {
             </div>
           )}
         </div>
-
-        {/* Description */}
-        {business.editorial_summary && (
-          <p className="mt-2 text-sm text-muted-foreground line-clamp-2 hidden sm:block">
-            {business.editorial_summary}
-          </p>
-        )}
       </div>
     </Link>
   );

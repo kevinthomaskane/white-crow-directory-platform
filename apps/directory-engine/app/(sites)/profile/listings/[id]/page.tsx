@@ -29,19 +29,18 @@ export default async function ManageListingPage({ params }: Props) {
       id,
       claimed_at,
       plan,
-      overrides,
+      description,
+      main_photo,
       site:sites!inner(
         domain
       ),
       business:businesses!inner(
         id,
         name,
-        description,
         phone,
         website,
         formatted_address,
         hours,
-        editorial_summary,
         main_photo_name
       ),
       media:site_business_media(
@@ -104,28 +103,22 @@ export default async function ManageListingPage({ params }: Props) {
             Edit Business Information
           </h2>
           {(() => {
-            const overrides =
-              siteBusiness.overrides as SiteBusinessOverrides | null;
             return (
               <BusinessEditForm
                 siteBusinessId={siteBusiness.id}
                 siteDomain={siteBusiness.site.domain}
                 plan={siteBusiness.plan}
                 defaultValues={{
-                  name: overrides?.name ?? siteBusiness.business.name,
-                  website: overrides?.website ?? siteBusiness.business.website,
-                  phone: overrides?.phone ?? siteBusiness.business.phone,
-                  formatted_address:
-                    overrides?.formatted_address ??
-                    siteBusiness.business.formatted_address,
-                  hours: (overrides?.hours ?? siteBusiness.business.hours) as {
+                  name: siteBusiness.business.name,
+                  website: siteBusiness.business.website,
+                  phone: siteBusiness.business.phone,
+                  formatted_address: siteBusiness.business.formatted_address,
+                  hours: siteBusiness.business.hours as {
                     weekday_text?: string[];
                   } | null,
-                  editorial_summary:
-                    overrides?.editorial_summary ??
-                    siteBusiness.business.editorial_summary,
+                  description: siteBusiness.description ?? null,
                   main_photo_name:
-                    overrides?.main_photo_name ??
+                    siteBusiness.main_photo ??
                     siteBusiness.business.main_photo_name,
                 }}
               />

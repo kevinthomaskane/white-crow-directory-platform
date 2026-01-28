@@ -14,8 +14,6 @@ type SiteBusinessRow = {
     Business,
     | 'id'
     | 'name'
-    | 'description'
-    | 'editorial_summary'
     | 'formatted_address'
     | 'city'
     | 'state'
@@ -77,8 +75,6 @@ export async function handleSyncBusinessesToSearchJob(
         business:businesses(
           id,
           name,
-          description,
-          editorial_summary,
           formatted_address,
           city,
           state,
@@ -213,7 +209,6 @@ export async function handleSyncBusinessesToSearchJob(
           id: biz.id.replace(/-/g, ''), // Sanitized for Typesense deduplication
           business_id: biz.id,
           name: biz.name,
-          description: biz.description || biz.editorial_summary || undefined,
           formatted_address: biz.formatted_address ?? undefined,
           city: biz.city ?? undefined,
           state: biz.state ?? undefined,
