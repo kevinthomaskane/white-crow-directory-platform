@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
-import { cn, slugify } from '@/lib/utils';
+import { cn, slugify, buildDirectoryUrl } from '@/lib/utils';
 import { getTopBusinesses } from '@/lib/data/site';
 import { BusinessCard } from '@/components/sites/business-card';
-import type { BusinessCardData, RouteContext } from '@/lib/types';
+import type { RouteContext } from '@/lib/types';
 
 interface TopBusinessesSectionProps {
   siteId: string;
@@ -52,44 +52,34 @@ async function BusinessesContent({
         </div>
 
         <div className="flex flex-col gap-4">
-          {businesses.map((business) => (
-            <BusinessCard
-              key={business.id}
-              business={business}
-              href={buildBusinessUrl(business, basePath, ctx)}
-            />
-          ))}
+          {businesses.map((business) => {
+            const singleCity = ctx.cityList.length === 1;
+            const singleCategory = ctx.categoryList.length === 1;
+            const categorySlug =
+              business.category?.slug || ctx.categoryList[0]?.slug;
+            const citySlug = business.city
+              ? slugify(business.city)
+              : ctx.cityList[0]?.slug;
+
+            return (
+              <BusinessCard
+                key={business.id}
+                business={business}
+                href={buildDirectoryUrl({
+                  basePath,
+                  categorySlug,
+                  citySlug,
+                  businessId: business.id,
+                  singleCity,
+                  singleCategory,
+                })}
+              />
+            );
+          })}
         </div>
       </div>
     </section>
   );
-}
-
-function buildBusinessUrl(
-  business: BusinessCardData,
-  basePath: string,
-  ctx: RouteContext
-): string {
-  const singleCity = ctx.cityList.length === 1;
-  const singleCategory = ctx.categoryList.length === 1;
-
-  const parts = [basePath];
-
-  const categorySlug = business.category?.slug || ctx.categoryList[0]?.slug;
-  if (categorySlug && !singleCategory) {
-    parts.push(categorySlug);
-  }
-
-  const citySlug = business.city
-    ? slugify(business.city)
-    : ctx.cityList[0]?.slug;
-  if (citySlug && !singleCity) {
-    parts.push(citySlug);
-  }
-
-  parts.push(business.id);
-
-  return '/' + parts.join('/');
 }
 
 function BusinessesSkeleton({ title = 'Top Rated' }: { title?: string }) {

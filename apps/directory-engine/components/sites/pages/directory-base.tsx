@@ -74,7 +74,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
       {hasMultipleCities && (
         <PopularCitiesSection
           className="bg-muted/30 scroll-mt-16"
-          siteId={site.id}
+          cities={ctx.cityList}
           basePath={basePath}
           title="Browse by Location"
           description={`Find ${businessTerm} in your city`}

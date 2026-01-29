@@ -7,7 +7,6 @@ import type {
   RouteContext,
   CategoryData,
   CityData,
-  PopularCityData,
   SiteStats,
   BusinessCardData,
   MapBusinessData,
@@ -76,21 +75,24 @@ export const getRouteContext = cache(
         .eq('site_id', site.id),
       supabase
         .from('site_cities')
-        .select('city:cities(name)')
-        .eq('site_id', site.id),
+        .select('city:cities(name, population)')
+        .eq('site_id', site.id)
+        .order('city(population)', { ascending: false, nullsFirst: false }),
     ]);
 
     const categoryList: CategoryData[] = (siteCategories.data || [])
       .map((sc) => {
-        const cat = sc.category as { slug: string; name: string } | null;
+        const cat = sc.category;
         return cat ? { slug: cat.slug, name: cat.name } : null;
       })
       .filter((c): c is CategoryData => c !== null);
 
     const cityList: CityData[] = (siteCities.data || [])
       .map((sc) => {
-        const city = sc.city as { name: string } | null;
-        return city ? { slug: slugify(city.name), name: city.name } : null;
+        const city = sc.city;
+        return city
+          ? { slug: slugify(city.name), name: city.name, population: city.population }
+          : null;
       })
       .filter((c): c is CityData => c !== null);
 
@@ -163,38 +165,6 @@ export const getSiteStats = cache(
       categoryCount: ctx.categoryList.length,
       cityCount: ctx.cityList.length,
     };
-  }
-);
-
-export const getPopularCities = cache(
-  async (siteId: string, limit = 30): Promise<PopularCityData[]> => {
-    const supabase = createServiceRoleClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!
-    );
-
-    const { data } = await supabase
-      .from('site_cities')
-      .select('city:cities(name, population)')
-      .eq('site_id', siteId)
-      .order('city(population)', { ascending: false, nullsFirst: false })
-      .limit(limit);
-
-    if (!data) return [];
-
-    return data
-      .map((sc) => {
-        const city = sc.city;
-        return city
-          ? {
-              slug: slugify(city.name),
-              name: city.name,
-              population: city.population,
-            }
-          : null;
-      })
-      .filter((c) => c !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
   }
 );
 

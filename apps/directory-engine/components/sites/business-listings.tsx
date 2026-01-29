@@ -3,20 +3,25 @@
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { slugify } from '@/lib/utils';
+import { slugify, buildDirectoryUrl } from '@/lib/utils';
 import { BusinessCard } from '@/components/sites/business-card';
 import { Button } from '@/components/ui/button';
 import { fetchCategoryBusinesses } from '@/actions/fetch-category-businesses';
-import type { BusinessCardData } from '@/lib/types';
+import { fetchCityBusinesses } from '@/actions/fetch-city-businesses';
+import { fetchCategoryCityBusinesses } from '@/actions/fetch-category-city-businesses';
+import type { BusinessCardData, RouteContext } from '@/lib/types';
+
+type ListingType = 'category' | 'city' | 'category-city';
 
 interface BusinessListingsProps {
   initialBusinesses: BusinessCardData[];
   initialTotal: number;
   initialHasMore: boolean;
   initialPage: number;
-  categorySlug: string;
   basePath: string;
-  hasMultipleCities: boolean;
+  ctx: RouteContext;
+  categorySlug?: string;
+  citySlug?: string;
   loadMoreLabel?: string;
   emptyMessage?: string;
   itemsPerPage?: number;
@@ -27,9 +32,10 @@ export function BusinessListings({
   initialTotal,
   initialHasMore,
   initialPage,
-  categorySlug,
   basePath,
-  hasMultipleCities,
+  ctx,
+  categorySlug,
+  citySlug,
   loadMoreLabel = 'Load More',
   emptyMessage = 'No businesses found.',
   itemsPerPage = 12,
@@ -44,29 +50,38 @@ export function BusinessListings({
   const [page, setPage] = useState(initialPage);
   const [isPending, startTransition] = useTransition();
 
-  // Note: initialPage comes from server based on URL params
-  // This ensures shared URLs show the correct number of businesses
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
 
-  const buildBusinessUrl = (businessCity: string | null, businessId: string) => {
-    const parts = [basePath, categorySlug];
+  // Determine listing type based on provided slugs
+  const listingType: ListingType =
+    categorySlug && citySlug
+      ? 'category-city'
+      : categorySlug
+        ? 'category'
+        : 'city';
 
-    if (hasMultipleCities && businessCity) {
-      parts.push(slugify(businessCity));
+  const fetchMoreBusinesses = async (nextPage: number) => {
+    switch (listingType) {
+      case 'category':
+        return fetchCategoryBusinesses(categorySlug!, nextPage, itemsPerPage);
+      case 'city':
+        return fetchCityBusinesses(citySlug!, nextPage, itemsPerPage);
+      case 'category-city':
+        return fetchCategoryCityBusinesses(
+          categorySlug!,
+          citySlug!,
+          nextPage,
+          itemsPerPage
+        );
     }
-
-    parts.push(businessId);
-    return '/' + parts.join('/');
   };
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
 
     startTransition(async () => {
-      const result = await fetchCategoryBusinesses(
-        categorySlug,
-        nextPage,
-        itemsPerPage
-      );
+      const result = await fetchMoreBusinesses(nextPage);
 
       if (result.ok) {
         setBusinesses((prev) => [...prev, ...result.data.businesses]);
@@ -100,7 +115,20 @@ export function BusinessListings({
           <BusinessCard
             key={business.id}
             business={business}
-            href={buildBusinessUrl(business.city, business.id)}
+            href={buildDirectoryUrl({
+              basePath,
+              categorySlug:
+                categorySlug ||
+                business.category?.slug ||
+                ctx.categoryList[0]?.slug,
+              citySlug:
+                citySlug ||
+                (business.city ? slugify(business.city) : undefined) ||
+                ctx.cityList[0]?.slug,
+              businessId: business.id,
+              singleCity,
+              singleCategory,
+            })}
           />
         ))}
       </div>

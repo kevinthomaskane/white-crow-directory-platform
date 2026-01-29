@@ -11,8 +11,8 @@ import {
   getFeaturedBusinesses,
 } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
-import { CategoryCityBusinessListings } from '@/components/sites/category-city-business-listings';
-import { BusinessCard } from '@/components/sites/business-card';
+import { BusinessListings } from '@/components/sites/business-listings';
+import { FeaturedBusinessesSection } from '@/components/sites/sections/featured-businesses-section';
 
 interface DirectoryCategoryCityPageProps {
   site: SiteConfig;
@@ -92,29 +92,14 @@ export async function DirectoryCategoryCityPage({
         </div>
       </div>
 
-      {/* Featured Businesses */}
-      {featuredBusinesses.length > 0 && (
-        <div className="py-16 bg-amber-50/50 dark:bg-amber-950/10">
-          <div className="mx-auto max-w-6xl px-4">
-            <h2 className="text-2xl font-bold tracking-tight mb-6">
-              Featured {category.name} in {city.name}
-            </h2>
-            <div className="flex flex-col gap-4">
-              {featuredBusinesses.map((business) => {
-                const href = `/${basePath}/${category.slug}/${city.slug}/${business.id}`;
-                return (
-                  <BusinessCard
-                    key={business.id}
-                    business={business}
-                    href={href}
-                    featured
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <FeaturedBusinessesSection
+        businesses={featuredBusinesses}
+        title={`Featured ${category.name} in ${city.name}`}
+        basePath={basePath}
+        ctx={ctx}
+        categorySlug={category.slug}
+        citySlug={city.slug}
+      />
 
       {/* Business Listings */}
       <div className="py-16">
@@ -123,14 +108,15 @@ export async function DirectoryCategoryCityPage({
             {category.name} in {city.name}
           </h2>
 
-          <CategoryCityBusinessListings
+          <BusinessListings
             initialBusinesses={businesses}
             initialTotal={total}
             initialHasMore={hasMore}
             initialPage={page}
+            basePath={basePath}
+            ctx={ctx}
             categorySlug={category.slug}
             citySlug={city.slug}
-            basePath={basePath}
             loadMoreLabel={`Load More ${businessTermSingular}s`}
             emptyMessage={`No ${businessTerm} found for ${category.name.toLowerCase()} in ${city.name}.`}
             itemsPerPage={ITEMS_PER_PAGE}

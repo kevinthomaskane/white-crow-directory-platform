@@ -33,8 +33,7 @@ export type SiteConfig = Pick<
 };
 
 export type CategoryData = { slug: string; name: string };
-export type CityData = { slug: string; name: string };
-export type PopularCityData = CityData & Pick<City, 'population'>;
+export type CityData = { slug: string; name: string; population: number | null };
 
 export interface RouteContext {
   categoryList: CategoryData[];

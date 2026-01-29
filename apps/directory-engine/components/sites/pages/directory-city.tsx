@@ -3,8 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import type { SiteConfig, RouteContext, CityData } from '@/lib/types';
 import { getBusinessesByCity, getFeaturedBusinesses } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
-import { CityBusinessListings } from '@/components/sites/city-business-listings';
-import { BusinessCard } from '@/components/sites/business-card';
+import { BusinessListings } from '@/components/sites/business-listings';
+import { FeaturedBusinessesSection } from '@/components/sites/sections/featured-businesses-section';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
 
 interface DirectoryCityPageProps {
@@ -67,37 +67,13 @@ export async function DirectoryCityPage({
         </div>
       </div>
 
-      {/* Featured Businesses */}
-      {featuredBusinesses.length > 0 && (
-        <div className="py-16 bg-amber-50/50 dark:bg-amber-950/10">
-          <div className="mx-auto max-w-6xl px-4">
-            <h2 className="text-2xl font-bold tracking-tight mb-6">
-              Featured {site.vertical?.term_businesses ?? 'Businesses'} in{' '}
-              {city.name}
-            </h2>
-            <div className="flex flex-col gap-4">
-              {featuredBusinesses.map((business) => {
-                const parts = [basePath];
-                if (business.category) {
-                  parts.push(business.category.slug);
-                }
-                parts.push(city.slug);
-                parts.push(business.id);
-                const href = '/' + parts.join('/');
-
-                return (
-                  <BusinessCard
-                    key={business.id}
-                    business={business}
-                    href={href}
-                    featured
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <FeaturedBusinessesSection
+        businesses={featuredBusinesses}
+        title={`Featured ${site.vertical?.term_businesses ?? 'Businesses'} in ${city.name}`}
+        basePath={basePath}
+        ctx={ctx}
+        citySlug={city.slug}
+      />
 
       {/* Business Listings */}
       <div className="py-16">
@@ -123,13 +99,14 @@ export async function DirectoryCityPage({
             />
           )}
 
-          <CityBusinessListings
+          <BusinessListings
             initialBusinesses={businesses}
             initialTotal={total}
             initialHasMore={hasMore}
             initialPage={page}
-            citySlug={city.slug}
             basePath={basePath}
+            ctx={ctx}
+            citySlug={city.slug}
             loadMoreLabel={`Load More ${businessTermSingular}s`}
             emptyMessage={`No ${businessTerm} found in ${city.name}.`}
             itemsPerPage={ITEMS_PER_PAGE}

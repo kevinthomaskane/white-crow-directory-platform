@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Map, { Source, Layer, Popup, MapRef } from 'react-map-gl/mapbox';
 import type { GeoJSONSource, MapMouseEvent } from 'mapbox-gl';
 import { Phone, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { slugify } from '@/lib/utils';
+import { slugify, buildDirectoryUrl } from '@/lib/utils';
 import { fetchMapBusinesses } from '@/actions/fetch-map-businesses';
 import type { MapBusinessData, MapBounds, RouteContext } from '@/lib/types';
 
@@ -36,32 +36,39 @@ export function BusinessMap({
   );
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Build URL for a business based on site context
-  const buildBusinessUrl = useCallback(
-    (business: MapBusinessData): string => {
-      const singleCity = ctx.cityList.length === 1;
-      const singleCategory = ctx.categoryList.length === 1;
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
 
-      const parts = [basePath];
-
-      const categorySlug = business.categorySlug || ctx.categoryList[0]?.slug;
-      if (categorySlug && !singleCategory) {
-        parts.push(categorySlug);
-      }
-
-      const citySlug = business.city
-        ? slugify(business.city)
-        : ctx.cityList[0]?.slug;
-      if (citySlug && !singleCity) {
-        parts.push(citySlug);
-      }
-
-      parts.push(business.id);
-
-      return '/' + parts.join('/');
-    },
-    [basePath, ctx]
-  );
+  const handleAddImage = useCallback(() => {
+    if (mapRef.current) {
+      const map = mapRef.current?.getMap();
+      if (!map) return;
+      map.loadImage(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/common%20assets/map-pin.png`,
+        (error, image) => {
+          if (error) {
+            console.error('Error loading pin image:', error);
+            return;
+          }
+          if (image && !map.hasImage('pin')) {
+            map.addImage('pin', image);
+            map.addLayer({
+              id: 'unclustered-point',
+              type: 'symbol',
+              source: 'businesses',
+              filter: ['!', ['has', 'point_count']],
+              layout: {
+                'icon-image': 'pin',
+                'icon-size': 1,
+                'icon-allow-overlap': true,
+                'icon-anchor': 'bottom',
+              },
+            });
+          }
+        }
+      );
+    }
+  }, []);
 
   // Convert businesses to GeoJSON for clustering
   const geojson: GeoJSON.FeatureCollection<GeoJSON.Point> = {
@@ -176,6 +183,7 @@ export function BusinessMap({
     <div className="relative w-full h-[500px] rounded-lg overflow-hidden border">
       <Map
         ref={mapRef}
+        onLoad={handleAddImage}
         mapboxAccessToken={mapboxToken}
         initialViewState={{
           longitude: center.longitude,
@@ -249,19 +257,6 @@ export function BusinessMap({
               'text-size': 12,
             }}
           />
-
-          {/* Individual markers */}
-          <Layer
-            id="unclustered-point"
-            type="circle"
-            filter={['!', ['has', 'point_count']]}
-            paint={{
-              'circle-color': '#DC2626',
-              'circle-radius': 8,
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#fff',
-            }}
-          />
         </Source>
 
         {/* Popup for selected business */}
@@ -300,7 +295,17 @@ export function BusinessMap({
               )}
 
               <Link
-                href={buildBusinessUrl(selectedBusiness)}
+                href={buildDirectoryUrl({
+                  basePath,
+                  categorySlug:
+                    selectedBusiness.categorySlug || ctx.categoryList[0]?.slug,
+                  citySlug: selectedBusiness.city
+                    ? slugify(selectedBusiness.city)
+                    : ctx.cityList[0]?.slug,
+                  businessId: selectedBusiness.id,
+                  singleCity,
+                  singleCategory,
+                })}
                 className="mt-3 flex items-center justify-center gap-1 w-full py-1.5 px-3 text-xs font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >

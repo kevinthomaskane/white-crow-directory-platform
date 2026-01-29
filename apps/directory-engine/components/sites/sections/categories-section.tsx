@@ -1,11 +1,15 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { cn, buildDirectoryUrl } from '@/lib/utils';
 import type { CategoryData } from '@/lib/types';
 
 interface CategoriesSectionProps {
   categories: CategoryData[];
   basePath: string;
+  singleCategory?: boolean;
   title?: string;
   description?: string;
   limit?: number;
@@ -16,18 +20,21 @@ interface CategoriesSectionProps {
 export function CategoriesSection({
   categories,
   basePath,
+  singleCategory = false,
   title = 'Browse Categories',
   description,
   limit = 12,
   showViewAll = true,
   className,
 }: CategoriesSectionProps) {
+  const [showAll, setShowAll] = useState(false);
+
   if (categories.length === 0) {
     return null;
   }
 
-  const displayedCategories = categories.slice(0, limit);
   const hasMore = categories.length > limit;
+  const displayedCategories = showAll ? categories : categories.slice(0, limit);
 
   return (
     <section id="by-category" className={cn('w-full py-16', className)}>
@@ -42,13 +49,18 @@ export function CategoriesSection({
             )}
           </div>
           {showViewAll && hasMore && (
-            <Link
-              href={`/${basePath}`}
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
               className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
             >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+              {showAll ? 'Show less' : 'View all'}
+              {showAll ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
           )}
         </div>
 
@@ -57,7 +69,11 @@ export function CategoriesSection({
             <CategoryCard
               key={category.slug}
               category={category}
-              href={`/${basePath}/${category.slug}`}
+              href={buildDirectoryUrl({
+                basePath,
+                categorySlug: category.slug,
+                singleCategory,
+              })}
             />
           ))}
         </div>

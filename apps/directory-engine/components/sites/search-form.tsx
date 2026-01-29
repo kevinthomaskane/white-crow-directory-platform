@@ -21,7 +21,7 @@ import {
   getBusinessSuggestions,
   type BusinessSuggestion,
 } from '@/actions/search-suggestions';
-import { slugify, cn } from '@/lib/utils';
+import { slugify, cn, buildDirectoryUrl } from '@/lib/utils';
 import type { CategoryData, CityData } from '@/lib/types';
 
 type SearchFormProps = {
@@ -38,8 +38,10 @@ export function SearchForm({
   className,
 }: SearchFormProps) {
   const router = useRouter();
-  const showLocationSearch = cities.length > 1;
-  const showCategorySuggestions = categories.length > 1;
+  const singleCity = cities.length === 1;
+  const singleCategory = categories.length === 1;
+  const showLocationSearch = !singleCity;
+  const showCategorySuggestions = !singleCategory;
 
   // What search state
   const [whatQuery, setWhatQuery] = useState('');
@@ -92,36 +94,6 @@ export function SearchForm({
     return () => clearTimeout(timer);
   }, [whatQuery, fetchBusinessSuggestions]);
 
-  // Build directory URL based on site configuration
-  // Single-city sites omit city, single-category sites omit category
-  const buildDirectoryUrl = (
-    categorySlug?: string | null,
-    citySlug?: string | null,
-    businessId?: string | null
-  ) => {
-    const singleCity = cities.length === 1;
-    const singleCategory = categories.length === 1;
-
-    const parts = [basePath];
-
-    // Add category if provided and not single-category site
-    if (categorySlug && !singleCategory) {
-      parts.push(categorySlug);
-    }
-
-    // Add city if provided and not single-city site
-    if (citySlug && !singleCity) {
-      parts.push(citySlug);
-    }
-
-    // Add business ID if provided
-    if (businessId) {
-      parts.push(businessId);
-    }
-
-    return '/' + parts.join('/');
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -133,7 +105,15 @@ export function SearchForm({
     )?.slug;
 
     if (categorySlug || citySlug) {
-      router.push(buildDirectoryUrl(categorySlug, citySlug));
+      router.push(
+        buildDirectoryUrl({
+          basePath,
+          categorySlug,
+          citySlug,
+          singleCity,
+          singleCategory,
+        })
+      );
     } else if (whatQuery.trim()) {
       // Free-text search
       const params = new URLSearchParams({ q: whatQuery });
@@ -154,8 +134,15 @@ export function SearchForm({
     setWhatOpen(false);
 
     // If only one city, navigate directly to results
-    if (cities.length === 1) {
-      router.push(buildDirectoryUrl(category.slug));
+    if (singleCity) {
+      router.push(
+        buildDirectoryUrl({
+          basePath,
+          categorySlug: category.slug,
+          singleCity,
+          singleCategory,
+        })
+      );
     }
   };
 
@@ -164,7 +151,16 @@ export function SearchForm({
     const categorySlug =
       business.categorySlug || categories[0]?.slug || 'business';
 
-    router.push(buildDirectoryUrl(categorySlug, citySlug, business.id));
+    router.push(
+      buildDirectoryUrl({
+        basePath,
+        categorySlug,
+        citySlug,
+        businessId: business.id,
+        singleCity,
+        singleCategory,
+      })
+    );
     setWhatOpen(false);
   };
 

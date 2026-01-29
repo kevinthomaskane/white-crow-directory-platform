@@ -1,6 +1,5 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
-import { getPopularCities } from '@/lib/data/site';
+import { buildDirectoryUrl } from '@/lib/utils';
 import type { SiteConfig, RouteContext } from '@/lib/types';
 
 interface SiteFooterProps {
@@ -101,9 +100,22 @@ export function SiteFooter({
               <h3 className="text-lg font-semibold text-foreground">
                 Popular Cities
               </h3>
-              <Suspense fallback={<CitiesSkeleton />}>
-                <CitiesList siteId={siteConfig.id} basePath={basePath} />
-              </Suspense>
+              <ul className="space-y-2">
+                {routeContext.cityList.slice(0, 10).map((city) => (
+                  <li key={city.slug}>
+                    <Link
+                      href={buildDirectoryUrl({
+                        basePath,
+                        citySlug: city.slug,
+                        singleCity: false,
+                      })}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {city.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
@@ -138,46 +150,5 @@ export function SiteFooter({
         </div>
       </div>
     </footer>
-  );
-}
-
-async function CitiesList({
-  siteId,
-  basePath,
-}: {
-  siteId: string;
-  basePath: string;
-}) {
-  const cities = await getPopularCities(siteId, 10);
-
-  if (cities.length === 0) {
-    return null;
-  }
-
-  return (
-    <ul className="space-y-2">
-      {cities.map((city) => (
-        <li key={city.slug}>
-          <Link
-            href={`/${basePath}/${city.slug}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {city.name}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CitiesSkeleton() {
-  return (
-    <ul className="space-y-2">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <li key={i}>
-          <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-        </li>
-      ))}
-    </ul>
   );
 }

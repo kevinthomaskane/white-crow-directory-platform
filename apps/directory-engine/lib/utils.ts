@@ -5,6 +5,49 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export interface DirectoryUrlOptions {
+  basePath: string;
+  categorySlug?: string | null;
+  citySlug?: string | null;
+  businessId?: string | null;
+  singleCity?: boolean;
+  singleCategory?: boolean;
+}
+
+/**
+ * Builds a directory URL based on site configuration.
+ * Single-city sites omit the city segment, single-category sites omit the category segment.
+ */
+export function buildDirectoryUrl(options: DirectoryUrlOptions): string {
+  const {
+    basePath,
+    categorySlug,
+    citySlug,
+    businessId,
+    singleCity = false,
+    singleCategory = false,
+  } = options;
+
+  const parts = [basePath];
+
+  // Add category if provided and not single-category site
+  if (categorySlug && !singleCategory) {
+    parts.push(categorySlug);
+  }
+
+  // Add city if provided and not single-city site
+  if (citySlug && !singleCity) {
+    parts.push(citySlug);
+  }
+
+  // Add business ID if provided
+  if (businessId) {
+    parts.push(businessId);
+  }
+
+  return '/' + parts.join('/');
+}
+
 export function normalizeWhitespace(input: string) {
   return input.trim().replace(/\s+/g, ' ');
 }

@@ -1,44 +1,38 @@
-import { Suspense } from 'react';
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getPopularCities } from '@/lib/data/site';
-import type { PopularCityData } from '@/lib/types';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { cn, buildDirectoryUrl } from '@/lib/utils';
+import type { CityData } from '@/lib/types';
 
 interface PopularCitiesSectionProps {
-  siteId: string;
+  cities: CityData[];
   basePath: string;
+  singleCity?: boolean;
   title?: string;
   description?: string;
   limit?: number;
-  totalCities?: number;
   className?: string;
 }
 
-export function PopularCitiesSection(props: PopularCitiesSectionProps) {
-  return (
-    <Suspense fallback={<CitiesSkeleton title={props.title} />}>
-      <CitiesContent {...props} />
-    </Suspense>
-  );
-}
-
-async function CitiesContent({
-  siteId,
+export function PopularCitiesSection({
+  cities,
   basePath,
+  singleCity = false,
   title = 'Popular Cities',
   description,
   limit = 30,
-  totalCities = 0,
   className,
 }: PopularCitiesSectionProps) {
-  const cities = await getPopularCities(siteId, limit);
+  const [showAll, setShowAll] = useState(false);
 
   if (cities.length === 0) {
     return null;
   }
 
-  const hasMore = totalCities > limit;
+  const hasMore = cities.length > limit;
+  const displayedCities = showAll ? cities : cities.slice(0, limit);
 
   return (
     <section id="by-location" className={cn('w-full py-16', className)}>
@@ -53,22 +47,31 @@ async function CitiesContent({
             )}
           </div>
           {hasMore && (
-            <Link
-              href={`/${basePath}`}
+            <button
+              type="button"
+              onClick={() => setShowAll(!showAll)}
               className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
             >
-              View all
-              <ChevronRight className="h-4 w-4" />
-            </Link>
+              {showAll ? 'Show less' : 'View all'}
+              {showAll ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
           )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {cities.map((city) => (
+          {displayedCities.map((city) => (
             <CityCard
               key={city.slug}
               city={city}
-              href={`/${basePath}/${city.slug}`}
+              href={buildDirectoryUrl({
+                basePath,
+                citySlug: city.slug,
+                singleCity,
+              })}
             />
           ))}
         </div>
@@ -78,7 +81,7 @@ async function CitiesContent({
 }
 
 interface CityCardProps {
-  city: PopularCityData;
+  city: CityData;
   href: string;
 }
 
@@ -92,28 +95,5 @@ function CityCard({ city, href }: CityCardProps) {
         {city.name}
       </span>
     </Link>
-  );
-}
-
-function CitiesSkeleton({ title = 'Popular Cities' }: { title?: string }) {
-  return (
-    <section className="w-full py-16">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex flex-col items-center justify-center rounded-lg border border-border bg-card p-4"
-            >
-              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-              <div className="mt-2 h-3 w-16 rounded bg-muted animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
