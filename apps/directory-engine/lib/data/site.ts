@@ -223,6 +223,7 @@ export const getTopBusinesses = cache(
       .select(
         `
         is_claimed,
+        plan,
         business:businesses(
           id,
           name,
@@ -271,6 +272,7 @@ export const getTopBusinesses = cache(
           website: business.website,
           formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
+          plan: sb.plan,
           category,
           reviewSource,
         };
@@ -423,6 +425,7 @@ export const getBusinessesByCategory = cache(
       .select(
         `
         is_claimed,
+        plan,
         business:businesses!inner(
           id,
           name,
@@ -467,6 +470,7 @@ export const getBusinessesByCategory = cache(
           website: business.website,
           formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
+          plan: sb.plan,
           category,
           reviewSource,
         };
@@ -476,7 +480,7 @@ export const getBusinessesByCategory = cache(
     const total = count ?? 0;
 
     return {
-      businesses,
+      businesses: businesses,
       total,
       hasMore: offset + businesses.length < total,
     };
@@ -529,6 +533,7 @@ export const getBusinessesByCity = cache(
       .select(
         `
         is_claimed,
+        plan,
         business:businesses!inner(
           id,
           name,
@@ -577,6 +582,7 @@ export const getBusinessesByCity = cache(
           website: business.website,
           formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
+          plan: sb.plan,
           category,
           reviewSource,
         };
@@ -586,7 +592,7 @@ export const getBusinessesByCity = cache(
     const total = count ?? 0;
 
     return {
-      businesses,
+      businesses: businesses,
       total,
       hasMore: offset + businesses.length < total,
     };
@@ -630,6 +636,7 @@ export const getBusinessesByCategoryAndCity = cache(
       .select(
         `
         is_claimed,
+        plan,
         business:businesses!inner(
           id,
           name,
@@ -675,6 +682,7 @@ export const getBusinessesByCategoryAndCity = cache(
           website: business.website,
           formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
+          plan: sb.plan,
           category,
           reviewSource,
         };
@@ -684,10 +692,112 @@ export const getBusinessesByCategoryAndCity = cache(
     const total = count ?? 0;
 
     return {
-      businesses,
+      businesses: businesses,
       total,
       hasMore: offset + businesses.length < total,
     };
+  }
+);
+
+export const getFeaturedBusinesses = cache(
+  async (
+    siteId: string,
+    options?: { categorySlug?: string; citySlug?: string }
+  ): Promise<BusinessCardData[]> => {
+    const supabase = createServiceRoleClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+
+    const { categorySlug, citySlug } = options ?? {};
+
+    // Get site's category slugs first
+    const { data: siteCategories } = await supabase
+      .from('site_categories')
+      .select('category:categories(slug)')
+      .eq('site_id', siteId);
+
+    const siteCategorySlugs = new Set(
+      (siteCategories || [])
+        .map((sc) => (sc.category as { slug: string } | null)?.slug)
+        .filter((s): s is string => s !== null)
+    );
+
+    // Build query for businesses with a plan
+    let query = supabase
+      .from('site_businesses')
+      .select(
+        `
+        is_claimed,
+        plan,
+        business:businesses!inner(
+          id,
+          name,
+          city,
+          main_photo_name,
+          phone,
+          website,
+          formatted_address,
+          business_review_sources(rating, provider, review_count),
+          business_categories(category:categories(slug, name))
+        )
+      `
+      )
+      .eq('site_id', siteId)
+      .not('plan', 'is', null);
+
+    // Apply optional category filter
+    if (categorySlug) {
+      query = query.eq(
+        'business.business_categories.category.slug',
+        categorySlug
+      );
+    }
+
+    // Apply optional city filter
+    if (citySlug) {
+      query = query.ilike('business.city', citySlug.replace(/-/g, ' '));
+    }
+
+    const { data } = await query;
+
+    if (!data) return [];
+
+    const businesses: BusinessCardData[] = data
+      .map((sb) => {
+        const business = sb.business;
+        if (!business) return null;
+
+        const reviewSource = business.business_review_sources?.[0] ?? null;
+
+        // Find the first category that belongs to this site
+        const matchingCategoryJoin = business.business_categories?.find(
+          (bc) => bc.category && siteCategorySlugs.has(bc.category.slug)
+        );
+        const category = matchingCategoryJoin?.category
+          ? {
+              slug: matchingCategoryJoin.category.slug,
+              name: matchingCategoryJoin.category.name,
+            }
+          : null;
+
+        return {
+          id: business.id,
+          name: business.name,
+          city: business.city,
+          main_photo_name: business.main_photo_name,
+          phone: business.phone,
+          website: business.website,
+          formatted_address: business.formatted_address,
+          is_claimed: sb.is_claimed,
+          plan: sb.plan,
+          category,
+          reviewSource,
+        };
+      })
+      .filter((b) => b !== null);
+
+    return businesses;
   }
 );
 
@@ -909,6 +1019,7 @@ export const getRelatedBusinesses = cache(
       .select(
         `
         is_claimed,
+        plan,
         business:businesses!inner(
           id,
           name,
@@ -967,6 +1078,7 @@ export const getRelatedBusinesses = cache(
           website: business.website,
           formatted_address: business.formatted_address,
           is_claimed: sb.is_claimed,
+          plan: sb.plan,
           category,
           reviewSource,
         };

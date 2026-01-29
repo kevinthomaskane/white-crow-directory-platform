@@ -7,19 +7,20 @@ import {
   Globe,
   MapPin,
   ExternalLink,
+  Check,
 } from 'lucide-react';
 import { cn, getBusinessImageUrl } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import type { BusinessCardData } from '@/lib/types';
 
 interface BusinessCardProps {
   business: BusinessCardData;
   href: string;
   className?: string;
+  featured?: boolean;
 }
 
-export function BusinessCard({ business, href, className }: BusinessCardProps) {
-  const providerLabel = formatProvider(business.reviewSource?.provider);
+export function BusinessCard({ business, href, className, featured }: BusinessCardProps) {
+  // const providerLabel = formatProvider(business.reviewSource?.provider);
 
   return (
     <Link
@@ -54,12 +55,10 @@ export function BusinessCard({ business, href, className }: BusinessCardProps) {
           <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
             {business.name}
           </h3>
-          <Badge
-            variant={business.is_claimed ? 'default' : 'outline'}
-            className="flex-shrink-0 text-xs"
-          >
-            {business.is_claimed ? 'Verified' : 'Unclaimed'}
-          </Badge>
+          <ClaimBadge
+            isClaimed={business.is_claimed}
+            hasPlan={!!business.plan}
+          />
         </div>
 
         {/* Rating row */}
@@ -67,11 +66,6 @@ export function BusinessCard({ business, href, className }: BusinessCardProps) {
           <div className="mt-1 flex items-center gap-1.5 text-sm">
             <span className="font-medium">{business.reviewSource.rating}</span>
             <RatingStars rating={business.reviewSource.rating} />
-            {providerLabel && (
-              <span className="text-muted-foreground hidden sm:inline">
-                on {providerLabel}
-              </span>
-            )}
           </div>
         )}
 
@@ -151,6 +145,36 @@ function formatWebsiteDisplay(url: string): string {
   } catch {
     return url;
   }
+}
+
+function ClaimBadge({
+  isClaimed,
+  hasPlan,
+}: {
+  isClaimed: boolean | null;
+  hasPlan: boolean;
+}) {
+  if (hasPlan) {
+    return (
+      <div className="flex-shrink-0 rounded-full bg-amber-100 p-1 dark:bg-amber-900/30">
+        <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+      </div>
+    );
+  }
+
+  if (isClaimed) {
+    return (
+      <div className="flex-shrink-0 rounded-full bg-green-100 p-1 dark:bg-green-900/30">
+        <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-shrink-0 rounded-full bg-muted p-1">
+      <Check className="h-3.5 w-3.5 text-muted-foreground" />
+    </div>
+  );
 }
 
 export { RatingStars, formatProvider };

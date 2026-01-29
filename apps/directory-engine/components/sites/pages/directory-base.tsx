@@ -49,6 +49,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
           />
         </div>
       </div>
+
       <TopBusinessesSection
         siteId={site.id}
         basePath={basePath}

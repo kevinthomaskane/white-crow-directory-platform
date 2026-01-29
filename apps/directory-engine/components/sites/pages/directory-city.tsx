@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type { SiteConfig, RouteContext, CityData } from '@/lib/types';
-import { getBusinessesByCity } from '@/lib/data/site';
+import { getBusinessesByCity, getFeaturedBusinesses } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
 import { CityBusinessListings } from '@/components/sites/city-business-listings';
+import { BusinessCard } from '@/components/sites/business-card';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
 
 interface DirectoryCityPageProps {
@@ -26,14 +27,13 @@ export async function DirectoryCityPage({
     site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
   const businessTermSingular = site.vertical?.term_business ?? 'Business';
 
-  // Fetch all businesses up to the requested page (for shareable URLs)
+  // Fetch featured businesses and regular listings in parallel
   const totalToFetch = page * ITEMS_PER_PAGE;
-  const { businesses, total, hasMore } = await getBusinessesByCity(
-    site.id,
-    city.slug,
-    1,
-    totalToFetch
-  );
+  const [featuredBusinesses, { businesses, total, hasMore }] =
+    await Promise.all([
+      getFeaturedBusinesses(site.id, { citySlug: city.slug }),
+      getBusinessesByCity(site.id, city.slug, 1, totalToFetch),
+    ]);
 
   return (
     <div>
@@ -66,6 +66,38 @@ export async function DirectoryCityPage({
           />
         </div>
       </div>
+
+      {/* Featured Businesses */}
+      {featuredBusinesses.length > 0 && (
+        <div className="py-16 bg-amber-50/50 dark:bg-amber-950/10">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="text-2xl font-bold tracking-tight mb-6">
+              Featured {site.vertical?.term_businesses ?? 'Businesses'} in{' '}
+              {city.name}
+            </h2>
+            <div className="flex flex-col gap-4">
+              {featuredBusinesses.map((business) => {
+                const parts = [basePath];
+                if (business.category) {
+                  parts.push(business.category.slug);
+                }
+                parts.push(city.slug);
+                parts.push(business.id);
+                const href = '/' + parts.join('/');
+
+                return (
+                  <BusinessCard
+                    key={business.id}
+                    business={business}
+                    href={href}
+                    featured
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Business Listings */}
       <div className="py-16">

@@ -102,33 +102,17 @@ export type ActionsResponse<T> =
       data: T;
     };
 
+/**
+ * Business hours as an array of weekday descriptions
+ * e.g., ["Monday: 9:00 AM – 5:00 PM", "Tuesday: 9:00 AM – 5:00 PM", ...]
+ */
+export type BusinessHours = string[];
+
 export type SiteAssetType = 'hero' | 'logo' | 'favicon';
 
 // Business types
 type Business = Database['public']['Tables']['businesses']['Row'];
 
-/**
- * User-provided overrides for business data stored in site_businesses.overrides
- * These take precedence over base business data when displaying
- *
- * Free tier: name, website, phone, hours, address fields
- * Pro tier: editorial_summary, main_photo_name
- */
-export type SiteBusinessOverrides = Partial<
-  Pick<
-    Business,
-    | 'name'
-    | 'website'
-    | 'phone'
-    | 'hours'
-    | 'formatted_address'
-    | 'street_address'
-    | 'city'
-    | 'state'
-    | 'postal_code'
-    | 'main_photo_name'
-  >
->;
 type SiteBusiness = Database['public']['Tables']['site_businesses']['Row'];
 type BusinessReviewSource =
   Database['public']['Tables']['business_review_sources']['Row'];
@@ -143,7 +127,7 @@ export type BusinessCardData = Pick<
   | 'website'
   | 'formatted_address'
 > &
-  Pick<SiteBusiness, 'is_claimed'> & {
+  Pick<SiteBusiness, 'is_claimed' | 'plan'> & {
     category: CategoryData | null;
     reviewSource: Pick<
       BusinessReviewSource,

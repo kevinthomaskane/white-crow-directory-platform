@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { BusinessEditForm } from '@/components/sites/account-listings/business-edit-form';
+import { BusinessProSection } from '@/components/sites/account-listings/business-pro-section';
 import { BusinessMediaSection } from '@/components/sites/account-listings/business-media-section';
-import type { SiteBusinessOverrides } from '@/lib/types';
+import type { BusinessHours } from '@/lib/types';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -102,29 +103,27 @@ export default async function ManageListingPage({ params }: Props) {
           <h2 className="text-lg font-medium mb-6">
             Edit Business Information
           </h2>
-          {(() => {
-            return (
-              <BusinessEditForm
-                siteBusinessId={siteBusiness.id}
-                siteDomain={siteBusiness.site.domain}
-                plan={siteBusiness.plan}
-                defaultValues={{
-                  name: siteBusiness.business.name,
-                  website: siteBusiness.business.website,
-                  phone: siteBusiness.business.phone,
-                  formatted_address: siteBusiness.business.formatted_address,
-                  hours: siteBusiness.business.hours as {
-                    weekday_text?: string[];
-                  } | null,
-                  description: siteBusiness.description ?? null,
-                  main_photo_name:
-                    siteBusiness.main_photo ??
-                    siteBusiness.business.main_photo_name,
-                }}
-              />
-            );
-          })()}
+          <BusinessEditForm
+            siteBusinessId={siteBusiness.id}
+            defaultValues={{
+              name: siteBusiness.business.name,
+              website: siteBusiness.business.website,
+              phone: siteBusiness.business.phone,
+              formatted_address: siteBusiness.business.formatted_address,
+              hours: siteBusiness.business.hours as BusinessHours | null,
+            }}
+          />
         </div>
+
+        <BusinessProSection
+          siteBusinessId={siteBusiness.id}
+          siteDomain={siteBusiness.site.domain}
+          plan={siteBusiness.plan}
+          initialDescription={siteBusiness.description}
+          initialMainPhoto={
+            siteBusiness.main_photo ?? siteBusiness.business.main_photo_name
+          }
+        />
 
         <BusinessMediaSection
           siteBusinessId={siteBusiness.id}

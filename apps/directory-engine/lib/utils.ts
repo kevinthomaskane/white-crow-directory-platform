@@ -110,8 +110,7 @@ export function getBusinessImageUrl(
   // Google Places photo names start with "places/"
   if (photoName.startsWith('places/')) {
     // Google Places API uses maxHeight/maxWidth
-    const maxDimension = height ?? width;
-    return `/api/places-photo?name=${encodeURIComponent(photoName)}&maxHeight=${maxDimension}`;
+    return `/api/places-photo?name=${encodeURIComponent(photoName)}`;
   }
 
   // Supabase storage path - use render endpoint for image transformations
@@ -138,7 +137,9 @@ function parseVideoUrl(
   }
 
   // Vimeo patterns
-  const vimeoMatch = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+  const vimeoMatch = url.match(
+    /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/
+  );
   if (vimeoMatch) {
     return { provider: 'vimeo', videoId: vimeoMatch[1] };
   }

@@ -111,13 +111,12 @@ export async function handleRefreshSiteBusinessesJob(
       `[Job ${job.id}] Fetching businesses page (offset: ${pageOffset}, limit: ${PAGE_SIZE})`
     );
 
-    // Fetch a page of businesses with their place_ids and claim status
+    // Fetch a page of businesses with their place_ids
     const { data: siteBusinesses, error: fetchError } = await supabase
       .from('site_businesses')
       .select(
         `
         business_id,
-        claimed_by,
         business:businesses(id, place_id, name)
       `
       )
@@ -132,15 +131,26 @@ export async function handleRefreshSiteBusinessesJob(
       break;
     }
 
-    // Filter to only businesses with place_ids, include claim status
+    // Filter to only businesses with place_ids
     const businessesWithPlaceIds = siteBusinesses
       .filter((sb) => sb.business && sb.business.place_id)
       .map((sb) => ({
         id: sb.business!.id,
         place_id: sb.business!.place_id!,
         name: sb.business!.name,
-        isClaimed: sb.claimed_by !== null,
       }));
+
+    // Batch check which businesses are claimed on ANY site
+    const businessIds = businessesWithPlaceIds.map((b) => b.id);
+    const { data: claimedBusinesses } = await supabase
+      .from('site_businesses')
+      .select('business_id')
+      .in('business_id', businessIds)
+      .not('claimed_by', 'is', null);
+
+    const claimedBusinessIds = new Set(
+      claimedBusinesses?.map((sb) => sb.business_id) ?? []
+    );
 
     console.log(
       `[Job ${job.id}] Processing ${businessesWithPlaceIds.length} businesses with place_ids`
@@ -153,7 +163,13 @@ export async function handleRefreshSiteBusinessesJob(
       // Process batch concurrently
       const results = await Promise.allSettled(
         batch.map((business) =>
-          refreshBusiness(job.id, business, PLACES_API_KEY, lookupCityId)
+          refreshBusiness(
+            job.id,
+            business,
+            PLACES_API_KEY,
+            lookupCityId,
+            claimedBusinessIds
+          )
         )
       );
 
@@ -215,9 +231,10 @@ export async function handleRefreshSiteBusinessesJob(
 
 async function refreshBusiness(
   jobId: string,
-  business: { id: string; place_id: string; name: string; isClaimed: boolean },
+  business: { id: string; place_id: string; name: string },
   apiKey: string,
-  lookupCityId: (city: string, state: string) => Promise<string | null>
+  lookupCityId: (city: string, state: string) => Promise<string | null>,
+  claimedBusinessIds: Set<string>
 ): Promise<boolean> {
   console.log(
     `[Job ${jobId}] Refreshing "${business.name}" (${business.place_id})`
@@ -245,12 +262,15 @@ async function refreshBusiness(
 
   const placeDetails = await res.json();
 
+  // Check if this business is claimed on any site
+  const isClaimed = claimedBusinessIds.has(business.id);
+
   // Update business record
   // For claimed businesses, only update non-user-editable fields (raw data, photo)
   // For unclaimed businesses, update everything from Google Places
   let businessUpdate;
 
-  if (business.isClaimed) {
+  if (isClaimed) {
     businessUpdate = {
       updated_at: new Date().toISOString(),
       raw: placeDetails,
@@ -276,7 +296,7 @@ async function refreshBusiness(
       longitude: placeDetails.location?.longitude || undefined,
       updated_at: new Date().toISOString(),
       raw: placeDetails,
-      hours: placeDetails.regularOpeningHours || undefined,
+      hours: placeDetails.regularOpeningHours?.weekdayDescriptions || undefined,
       main_photo_name: placeDetails.photos?.[0]?.name || undefined,
     };
   }

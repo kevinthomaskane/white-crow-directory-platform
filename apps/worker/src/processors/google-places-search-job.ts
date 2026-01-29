@@ -27,7 +27,7 @@ function createCityLookupCache() {
 
   return async function lookupCityId(
     city: string,
-    state: string
+    state: string,
   ): Promise<string | null> {
     const cityName = city?.trim().toLowerCase();
     const stateName = state?.trim().toLowerCase();
@@ -112,7 +112,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     const place = places[i];
     const placeNumber = i + 1;
     console.log(
-      `\n\n\n\n\n[Job ${job.id}] Processing place ${placeNumber}/${places.length} (${place.id})`
+      `\n\n\n\n\n[Job ${job.id}] Processing place ${placeNumber}/${places.length} (${place.id})`,
     );
 
     const res = await fetchWithRetry(
@@ -124,87 +124,117 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           'X-Goog-Api-Key': PLACES_API_KEY,
           'X-Goog-FieldMask': placeDetailsFieldMask.join(','),
         },
-      }
+      },
     );
     if (!res.ok) {
       const text = await res.text();
       console.error(
-        `[Job ${job.id}] Failed to fetch place details for ${place.id}: ${res.status} ${text}`
+        `[Job ${job.id}] Failed to fetch place details for ${place.id}: ${res.status} ${text}`,
       );
       continue;
     }
     const placeDetails = await res.json();
     const businessName = placeDetails.displayName?.text || 'Unknown';
     console.log(
-      `[Job ${job.id}] Fetched details for: "${businessName}" (${place.id})`
+      `[Job ${job.id}] Fetched details for: "${businessName}" (${place.id})`,
     );
     const { state, city, postalCode, streetAddress } = parseAddressComponents(
-      placeDetails.addressComponents || []
+      placeDetails.addressComponents || [],
     );
 
     // Look up city_id from city and state
     const cityId = await lookupCityId(city, state);
 
-    // Upsert business into the database
-    const { data: businessData, error: businessInsertError } = await supabase
+    // Check if this business already exists and is claimed on any site
+    let businessId: string = '';
+    const { data: existingBusiness } = await supabase
       .from('businesses')
-      .upsert(
-        {
-          place_id: placeDetails.id,
-          name: placeDetails.displayName?.text || null,
-          formatted_address: placeDetails.formattedAddress || null,
-          website: placeDetails.websiteUri || null,
-          phone: placeDetails.nationalPhoneNumber || null,
-          latitude: placeDetails.location?.latitude || null,
-          longitude: placeDetails.location?.longitude || null,
-          updated_at: new Date().toISOString(),
-          raw: placeDetails,
-          city,
-          state,
-          city_id: cityId,
-          hours: placeDetails.regularOpeningHours || null,
-          main_photo_name: placeDetails.photos?.[0]?.name || null,
-          postal_code: postalCode,
-          street_address: streetAddress,
-        },
-        { onConflict: 'place_id' }
-      )
       .select('id')
+      .eq('place_id', placeDetails.id)
       .single();
 
-    if (businessInsertError) {
+    let isClaimed = false;
+
+    if (existingBusiness) {
+      businessId = existingBusiness.id;
+
+      const { count: claimCount } = await supabase
+        .from('site_businesses')
+        .select('*', { count: 'exact', head: true })
+        .eq('business_id', existingBusiness.id)
+        .not('claimed_by', 'is', null);
+
+      isClaimed = (claimCount ?? 0) > 0;
+    }
+
+    // For unclaimed/new businesses, update everything
+    if (!isClaimed) {
+      const businessUpsertData = {
+        place_id: placeDetails.id,
+        name: placeDetails.displayName?.text || null,
+        formatted_address: placeDetails.formattedAddress || null,
+        website: placeDetails.websiteUri || null,
+        phone: placeDetails.nationalPhoneNumber || null,
+        latitude: placeDetails.location?.latitude || null,
+        longitude: placeDetails.location?.longitude || null,
+        updated_at: new Date().toISOString(),
+        raw: placeDetails,
+        city,
+        state,
+        city_id: cityId,
+        hours: placeDetails.regularOpeningHours?.weekdayDescriptions || null,
+        main_photo_name: placeDetails.photos?.[0]?.name || null,
+        postal_code: postalCode,
+        street_address: streetAddress,
+      };
+      const { data: businessData, error: businessInsertError } = await supabase
+        .from('businesses')
+        .upsert(businessUpsertData, { onConflict: 'place_id' })
+        .select('id')
+        .single();
+
+      if (businessInsertError) {
+        console.error(
+          `[Job ${job.id}] Failed to upsert business "${businessName}" (${placeDetails.id}):`,
+          businessInsertError,
+        );
+        continue;
+      }
+      businessId = businessData.id;
+      console.log(
+        `[Job ${job.id}] ✅  Upserted business "${businessName}" (ID: ${businessId})`,
+      );
+    }
+
+    if (!businessId) {
       console.error(
-        `[Job ${job.id}] Failed to upsert business "${businessName}" (${placeDetails.id}):`,
-        businessInsertError
+        `[Job ${job.id}] Failed to get business ID for "${businessName}" (${placeDetails.id}):`,
+        'No business ID found',
       );
       continue;
     }
-
-    console.log(
-      `[Job ${job.id}] ✅  Upserted business "${businessName}" (ID: ${businessData.id})`
-    );
 
     // Add new record to business_categories joining table
     const { error: businessCategoryError } = await supabase
       .from('business_categories')
       .upsert(
         {
-          business_id: businessData.id,
+          business_id: businessId,
           category_id: categoryId,
         },
-        { onConflict: 'business_id,category_id' }
+        { onConflict: 'business_id,category_id' },
       );
 
     if (businessCategoryError) {
       console.error(
-        `[Job ${job.id}] Failed to insert business category for "${businessName}" (${businessData.id}):`,
-        businessCategoryError
+        `[Job ${job.id}] Failed to insert business category for "${businessName}" (${businessId}):`,
+        businessCategoryError,
       );
       continue;
     }
 
     console.log(
-      `[Job ${job.id}] ✅ Associated category ${categoryId} with business "${businessName}"`
+      `[Job ${job.id}] ✅ Associated category ${categoryId} with business "${businessName}"`,
     );
 
     // Associate business with site if siteId is provided
@@ -214,19 +244,19 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
         .upsert(
           {
             site_id: siteId,
-            business_id: businessData.id,
+            business_id: businessId,
           },
-          { onConflict: 'site_id,business_id' }
+          { onConflict: 'site_id,business_id' },
         );
 
       if (siteBusinessError) {
         console.error(
           `[Job ${job.id}] Failed to associate business "${businessName}" with site ${siteId}:`,
-          siteBusinessError
+          siteBusinessError,
         );
       } else {
         console.log(
-          `[Job ${job.id}] ✅ Associated business "${businessName}" with site ${siteId}`
+          `[Job ${job.id}] ✅ Associated business "${businessName}" with site ${siteId}`,
         );
       }
     }
@@ -235,13 +265,13 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
       const source: ReviewSource = 'google_places';
       const reviewCount = placeDetails.reviews.length;
       console.log(
-        `[Job ${job.id}] Inserting ${reviewCount} review(s) for "${businessName}"`
+        `[Job ${job.id}] Inserting ${reviewCount} review(s) for "${businessName}"`,
       );
 
       const reviews: BusinessReviewInsert[] = placeDetails.reviews.map(
         (r: Review): BusinessReviewInsert => ({
           source,
-          business_id: businessData.id,
+          business_id: businessId,
           author_image_url: r.authorAttribution?.photoUri || null,
           author_name: r.authorAttribution?.displayName || 'Anonymous',
           author_url: r.authorAttribution?.uri || null,
@@ -250,7 +280,7 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
           text: r.text?.text || null,
           time: r.publishTime || null,
           review_id: r.name || crypto.randomUUID(),
-        })
+        }),
       );
       const { error: businessReviewsInsertError } = await supabase
         .from('business_reviews')
@@ -258,31 +288,31 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
 
       if (businessReviewsInsertError) {
         console.error(
-          `[Job ${job.id}] Failed to insert reviews for "${businessName}" (${businessData.id}):`,
-          businessReviewsInsertError
+          `[Job ${job.id}] Failed to insert reviews for "${businessName}" (${businessId}):`,
+          businessReviewsInsertError,
         );
       } else {
         const { error: reviewSourceError } = await supabase
           .from('business_review_sources')
           .upsert(
             {
-              business_id: businessData.id,
+              business_id: businessId,
               provider: source,
               rating: placeDetails.rating,
               review_count: placeDetails.userRatingCount || 0,
               url: placeDetails.googleMapsUri || null,
               last_synced_at: new Date().toISOString(),
             },
-            { onConflict: 'business_id,provider' }
+            { onConflict: 'business_id,provider' },
           );
         if (reviewSourceError) {
           console.error(
             `[Job ${job.id}] Failed to upsert review source for "${businessName}":`,
-            reviewSourceError
+            reviewSourceError,
           );
         }
         console.log(
-          `[Job ${job.id}] ✓ Inserted ${reviewCount} review(s) for "${businessName}"`
+          `[Job ${job.id}] ✓ Inserted ${reviewCount} review(s) for "${businessName}"`,
         );
       }
     } else {
@@ -304,17 +334,17 @@ export async function handleGooglePlacesSearchJob(job: GooglePlacesSearchJob) {
     if (jobUpdateError) {
       console.error(
         `[Job ${job.id}] Failed to update job progress:`,
-        jobUpdateError
+        jobUpdateError,
       );
     } else {
       console.log(
-        `[Job ${job.id}] Progress: ${placeNumber}/${places.length} (${progress}%) - "${businessName}" completed`
+        `[Job ${job.id}] Progress: ${placeNumber}/${places.length} (${progress}%) - "${businessName}" completed`,
       );
     }
   }
 
   console.log(
-    `[Job ${job.id}] ✓ Completed processing ${meta.processed_places}/${places.length} place(s)`
+    `[Job ${job.id}] ✓ Completed processing ${meta.processed_places}/${places.length} place(s)`,
   );
   await markJobCompleted(job.id, meta);
 }
@@ -331,7 +361,7 @@ async function runSearchQueries(params: { apiKey: string; query: string }) {
     console.log(
       `Searching for "${query}" - Page ${pageNumber}${
         pageToken ? ' (pagination)' : ''
-      }`
+      }`,
     );
 
     const res = await fetch(
@@ -347,7 +377,7 @@ async function runSearchQueries(params: { apiKey: string; query: string }) {
           textQuery: query,
           ...(pageToken ? { pageToken } : {}),
         }),
-      }
+      },
     );
 
     if (!res.ok) {
@@ -360,7 +390,7 @@ async function runSearchQueries(params: { apiKey: string; query: string }) {
     if (data.places?.length) {
       allPlaces.push(...data.places);
       console.log(
-        `  Found ${data.places.length} place(s) on page ${pageNumber} (total: ${allPlaces.length})`
+        `  Found ${data.places.length} place(s) on page ${pageNumber} (total: ${allPlaces.length})`,
       );
     } else {
       console.log(`  No places found on page ${pageNumber}`);

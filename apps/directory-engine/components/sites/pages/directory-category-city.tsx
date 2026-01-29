@@ -6,9 +6,13 @@ import type {
   CategoryData,
   CityData,
 } from '@/lib/types';
-import { getBusinessesByCategoryAndCity } from '@/lib/data/site';
+import {
+  getBusinessesByCategoryAndCity,
+  getFeaturedBusinesses,
+} from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
 import { CategoryCityBusinessListings } from '@/components/sites/category-city-business-listings';
+import { BusinessCard } from '@/components/sites/business-card';
 
 interface DirectoryCategoryCityPageProps {
   site: SiteConfig;
@@ -32,15 +36,22 @@ export async function DirectoryCategoryCityPage({
     site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
   const businessTermSingular = site.vertical?.term_business ?? 'Business';
 
-  // Fetch all businesses up to the requested page (for shareable URLs)
+  // Fetch featured businesses and regular listings in parallel
   const totalToFetch = page * ITEMS_PER_PAGE;
-  const { businesses, total, hasMore } = await getBusinessesByCategoryAndCity(
-    site.id,
-    category.slug,
-    city.slug,
-    1,
-    totalToFetch
-  );
+  const [featuredBusinesses, { businesses, total, hasMore }] =
+    await Promise.all([
+      getFeaturedBusinesses(site.id, {
+        categorySlug: category.slug,
+        citySlug: city.slug,
+      }),
+      getBusinessesByCategoryAndCity(
+        site.id,
+        category.slug,
+        city.slug,
+        1,
+        totalToFetch
+      ),
+    ]);
 
   return (
     <div>
@@ -80,6 +91,30 @@ export async function DirectoryCategoryCityPage({
           />
         </div>
       </div>
+
+      {/* Featured Businesses */}
+      {featuredBusinesses.length > 0 && (
+        <div className="py-16 bg-amber-50/50 dark:bg-amber-950/10">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="text-2xl font-bold tracking-tight mb-6">
+              Featured {category.name} in {city.name}
+            </h2>
+            <div className="flex flex-col gap-4">
+              {featuredBusinesses.map((business) => {
+                const href = `/${basePath}/${category.slug}/${city.slug}/${business.id}`;
+                return (
+                  <BusinessCard
+                    key={business.id}
+                    business={business}
+                    href={href}
+                    featured
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Business Listings */}
       <div className="py-16">

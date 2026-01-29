@@ -2,13 +2,12 @@
 
 import { type BusinessEditFormValues } from '@/components/sites/account-listings/business-edit-form';
 import {
-  createServiceRoleClient,
   createTypesenseClient,
   BUSINESSES_COLLECTION,
   type BusinessDocument,
 } from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
-import type { ActionsResponse } from '@/lib/types';
+import type { ActionsResponse, BusinessHours } from '@/lib/types';
 
 interface MapboxFeature {
   place_name: string;
@@ -32,19 +31,17 @@ interface MapboxGeocodeResponse {
 interface UpdateBusinessPayload {
   siteBusinessId: string;
   updates: BusinessEditFormValues;
-  originalAddress: string | null;
-  /** If true, generates a signed upload URL for an image */
-  hasNewImage?: boolean;
-  /** Required when hasNewImage is true */
-  siteDomain?: string;
+  original: {
+    name: string;
+    website: string | null;
+    phone: string | null;
+    formatted_address: string | null;
+    hours: BusinessHours | null;
+  };
 }
 
 interface UpdateBusinessResult {
   updated: true;
-  /** Signed URL to upload the image to (only present when hasNewImage was true) */
-  imageUploadUrl?: string;
-  /** Storage path for the image (only present when hasNewImage was true) */
-  imagePath?: string;
 }
 
 async function geocodeAddress(address: string): Promise<{
@@ -122,10 +119,9 @@ async function geocodeAddress(address: string): Promise<{
 }
 
 export async function updateBusinessOverrides(
-  payload: UpdateBusinessPayload
+  payload: UpdateBusinessPayload,
 ): Promise<ActionsResponse<UpdateBusinessResult>> {
-  const { siteBusinessId, updates, originalAddress, hasNewImage, siteDomain } =
-    payload;
+  const { siteBusinessId, updates, original } = payload;
 
   if (!siteBusinessId) {
     return { ok: false, error: 'Missing site business ID.' };
@@ -154,12 +150,11 @@ export async function updateBusinessOverrides(
       id,
       site_id,
       claimed_by,
-      plan,
       business:businesses!inner(
         id,
         formatted_address
       )
-    `
+    `,
     )
     .eq('id', siteBusinessId)
     .single();
@@ -175,28 +170,28 @@ export async function updateBusinessOverrides(
     };
   }
 
-  const isPro = Boolean(siteBusiness.plan);
-
-  // Build updates for the businesses table
+  // Build updates for the businesses table - only include changed fields
   const businessUpdates: Record<string, unknown> = {};
 
-  if (updates.name !== undefined) {
+  if (updates.name !== original.name) {
     businessUpdates.name = updates.name;
   }
-  if (updates.website !== undefined) {
+  if (updates.website !== original.website) {
     businessUpdates.website = updates.website;
   }
-  if (updates.phone !== undefined) {
+  if (updates.phone !== original.phone) {
     businessUpdates.phone = updates.phone;
   }
-  if (updates.hours !== undefined) {
+  // Compare hours arrays
+  const hoursChanged =
+    JSON.stringify(updates.hours) !== JSON.stringify(original.hours);
+  if (hoursChanged) {
     businessUpdates.hours = updates.hours;
   }
 
   // Handle address update - requires geocoding
   const addressChanged =
-    updates.formatted_address !== undefined &&
-    updates.formatted_address !== originalAddress;
+    updates.formatted_address !== original.formatted_address;
 
   if (addressChanged && updates.formatted_address) {
     const geocodeResult = await geocodeAddress(updates.formatted_address);
@@ -262,9 +257,6 @@ export async function updateBusinessOverrides(
     businessUpdates.latitude = geocodeResult.latitude;
     businessUpdates.longitude = geocodeResult.longitude;
     businessUpdates.city_id = cityId;
-  } else if (updates.formatted_address !== undefined) {
-    // Address cleared or unchanged
-    businessUpdates.formatted_address = updates.formatted_address;
   }
 
   // Update businesses table if there are changes
@@ -283,115 +275,36 @@ export async function updateBusinessOverrides(
     }
   }
 
-  // Build updates for site_businesses table (pro enrichments)
-  const siteBusinessUpdates: Record<string, unknown> = {};
-
-  // Handle description (pro feature)
-  if (updates.description !== undefined) {
-    if (!isPro && updates.description) {
-      return {
-        ok: false,
-        error:
-          'A Pro subscription is required to customize your business description.',
-      };
-    }
-    siteBusinessUpdates.description = isPro ? updates.description : null;
-  }
-
-  // Handle image upload if requested
-  let imageUploadUrl: string | undefined;
-  let imagePath: string | undefined;
-
-  if (hasNewImage) {
-    if (!isPro) {
-      return {
-        ok: false,
-        error: 'A Pro subscription is required to upload custom images.',
-      };
-    }
-
-    if (!siteDomain) {
-      return {
-        ok: false,
-        error: 'Site domain is required for image upload.',
-      };
-    }
-
-    // Use service role client for storage operations
-    const serviceClient = createServiceRoleClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!
-    );
-
-    const bucketName = siteDomain;
-
-    // Check if bucket exists, create if not
-    const { data: buckets } = await serviceClient.storage.listBuckets();
-    const bucketExists = buckets?.some((b) => b.name === bucketName);
-
-    if (!bucketExists) {
-      const { error: createError } = await serviceClient.storage.createBucket(
-        bucketName,
-        { public: true }
-      );
-
-      if (createError) {
-        return {
-          ok: false,
-          error: `Failed to create storage bucket: ${createError.message}`,
-        };
-      }
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const filename = `business-media/${siteBusinessId}/main-${timestamp}`;
-
-    // Generate signed upload URL (valid for 5 minutes)
-    const { data: uploadData, error: uploadError } = await serviceClient.storage
-      .from(bucketName)
-      .createSignedUploadUrl(filename);
-
-    if (uploadError || !uploadData) {
-      return {
-        ok: false,
-        error: `Failed to generate upload URL: ${uploadError?.message}`,
-      };
-    }
-
-    imagePath = `${bucketName}/${filename}`;
-    imageUploadUrl = uploadData.signedUrl;
-
-    // Set the image path in site_business
-    siteBusinessUpdates.main_photo = imagePath;
-  }
-
-  // Update site_businesses table if there are changes
-  if (Object.keys(siteBusinessUpdates).length > 0) {
-    const { error: siteBusinessUpdateError } = await supabase
-      .from('site_businesses')
-      .update(siteBusinessUpdates)
-      .eq('id', siteBusinessId);
-
-    if (siteBusinessUpdateError) {
-      console.error('Error updating site_business:', siteBusinessUpdateError);
-      return {
-        ok: false,
-        error: 'Failed to update business. Please try again.',
-      };
-    }
-  }
-
   // Sync changes to Typesense search index if searchable fields changed
-  const searchableFieldsChanged =
-    businessUpdates.name !== undefined ||
-    businessUpdates.formatted_address !== undefined ||
-    businessUpdates.city !== undefined ||
-    businessUpdates.state !== undefined ||
-    businessUpdates.phone !== undefined ||
-    businessUpdates.website !== undefined;
+  const searchableFields = [
+    'name',
+    'formatted_address',
+    'city',
+    'state',
+    'phone',
+    'website',
+  ] as const;
 
-  if (searchableFieldsChanged) {
+  const typesenseUpdate: Partial<BusinessDocument> = {};
+
+  for (const field of searchableFields) {
+    if (businessUpdates[field] !== undefined) {
+      typesenseUpdate[field] = (businessUpdates[field] as string) || undefined;
+    }
+  }
+
+  // Update location if coordinates changed
+  if (
+    businessUpdates.latitude !== undefined &&
+    businessUpdates.longitude !== undefined
+  ) {
+    typesenseUpdate.location = [
+      businessUpdates.latitude as number,
+      businessUpdates.longitude as number,
+    ];
+  }
+
+  if (Object.keys(typesenseUpdate).length > 0) {
     try {
       const typesense = createTypesenseClient({
         apiKey: process.env.TYPESENSE_API_KEY!,
@@ -400,46 +313,10 @@ export async function updateBusinessOverrides(
         protocol: process.env.NODE_ENV === 'production' ? 'https' : 'http',
       });
 
-      // Build partial update with only the changed fields
-      const typesenseUpdate: Partial<BusinessDocument> & { id: string } = {
-        id: siteBusiness.business.id,
-      };
-
-      if (businessUpdates.name !== undefined) {
-        typesenseUpdate.name = businessUpdates.name as string;
-      }
-      if (businessUpdates.formatted_address !== undefined) {
-        typesenseUpdate.formatted_address =
-          (businessUpdates.formatted_address as string) || undefined;
-      }
-      if (businessUpdates.city !== undefined) {
-        typesenseUpdate.city = (businessUpdates.city as string) || undefined;
-      }
-      if (businessUpdates.state !== undefined) {
-        typesenseUpdate.state = (businessUpdates.state as string) || undefined;
-      }
-      if (businessUpdates.phone !== undefined) {
-        typesenseUpdate.phone = (businessUpdates.phone as string) || undefined;
-      }
-      if (businessUpdates.website !== undefined) {
-        typesenseUpdate.website =
-          (businessUpdates.website as string) || undefined;
-      }
-
-      // Update location if coordinates changed
-      if (
-        businessUpdates.latitude !== undefined &&
-        businessUpdates.longitude !== undefined
-      ) {
-        typesenseUpdate.location = [
-          businessUpdates.latitude as number,
-          businessUpdates.longitude as number,
-        ];
-      }
-
+      // Typesense document IDs are UUIDs without dashes
       await typesense
         .collections<BusinessDocument>(BUSINESSES_COLLECTION)
-        .documents(siteBusiness.business.id)
+        .documents(siteBusiness.business.id.replace(/-/g, ''))
         .update(typesenseUpdate);
     } catch (typesenseError) {
       // Log error but don't fail the request - Supabase is the source of truth
@@ -451,8 +328,6 @@ export async function updateBusinessOverrides(
     ok: true,
     data: {
       updated: true,
-      ...(imageUploadUrl && { imageUploadUrl }),
-      ...(imagePath && { imagePath }),
     },
   };
 }
