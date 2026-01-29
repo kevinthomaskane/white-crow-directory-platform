@@ -52,9 +52,9 @@ function parseDirectoryRoute(
   const firstIsCategory = ctx.categories.has(first);
   const firstIsCity = ctx.cities.has(first);
 
-  if (firstIsCategory) {
+  if (firstIsCategory && !singleCategory) {
     category = first;
-  } else if (firstIsCity) {
+  } else if (firstIsCity && !singleCity) {
     city = first;
   } else {
     return null; // Invalid first segment
@@ -65,9 +65,9 @@ function parseDirectoryRoute(
     const secondIsCategory = ctx.categories.has(second);
     const secondIsCity = ctx.cities.has(second);
 
-    if (category && secondIsCity) {
+    if (category && secondIsCity && !singleCity) {
       city = second;
-    } else if (city && secondIsCategory) {
+    } else if (city && secondIsCategory && !singleCategory) {
       category = second;
     } else if (category && singleCity) {
       // Single-city site: second segment is business ID
