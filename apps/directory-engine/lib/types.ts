@@ -38,8 +38,6 @@ export type CityData = { slug: string; name: string; population: number | null }
 export interface RouteContext {
   categoryList: CategoryData[];
   cityList: CityData[];
-  categories: Set<string>;
-  cities: Set<string>;
 }
 
 export interface SiteStats {

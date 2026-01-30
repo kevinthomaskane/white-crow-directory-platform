@@ -25,6 +25,7 @@ interface BusinessListingsProps {
   loadMoreLabel?: string;
   emptyMessage?: string;
   itemsPerPage?: number;
+  featuredBusinesses: BusinessCardData[];
 }
 
 export function BusinessListings({
@@ -39,6 +40,7 @@ export function BusinessListings({
   loadMoreLabel = 'Load More',
   emptyMessage = 'No businesses found.',
   itemsPerPage = 12,
+  featuredBusinesses,
 }: BusinessListingsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,6 +113,27 @@ export function BusinessListings({
       </p>
 
       <div className="flex flex-col gap-4">
+        {featuredBusinesses.map((business) => (
+          <BusinessCard
+            key={business.id}
+            business={business}
+            href={buildDirectoryUrl({
+              basePath,
+              categorySlug:
+                categorySlug ||
+                business.category?.slug ||
+                ctx.categoryList[0]?.slug,
+              citySlug:
+                citySlug ||
+                (business.city ? slugify(business.city) : undefined) ||
+                ctx.cityList[0]?.slug,
+              businessId: business.id,
+              singleCity,
+              singleCategory,
+            })}
+            featured
+          />
+        ))}
         {businesses.map((business) => (
           <BusinessCard
             key={business.id}

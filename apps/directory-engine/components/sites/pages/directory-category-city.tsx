@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type {
@@ -12,7 +13,7 @@ import {
 } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
 import { BusinessListings } from '@/components/sites/business-listings';
-import { FeaturedBusinessesSection } from '@/components/sites/sections/featured-businesses-section';
+import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
 
 interface DirectoryCategoryCityPageProps {
   site: SiteConfig;
@@ -24,7 +25,7 @@ interface DirectoryCategoryCityPageProps {
 
 const ITEMS_PER_PAGE = 12;
 
-export async function DirectoryCategoryCityPage({
+export function DirectoryCategoryCityPage({
   site,
   ctx,
   category,
@@ -36,23 +37,6 @@ export async function DirectoryCategoryCityPage({
     site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
   const businessTermSingular = site.vertical?.term_business ?? 'Business';
 
-  // Fetch featured businesses and regular listings in parallel
-  const totalToFetch = page * ITEMS_PER_PAGE;
-  const [featuredBusinesses, { businesses, total, hasMore }] =
-    await Promise.all([
-      getFeaturedBusinesses(site.id, {
-        categorySlug: category.slug,
-        citySlug: city.slug,
-      }),
-      getBusinessesByCategoryAndCity(
-        site.id,
-        category.slug,
-        city.slug,
-        1,
-        totalToFetch
-      ),
-    ]);
-
   return (
     <div>
       {/* Header */}
@@ -63,23 +47,31 @@ export async function DirectoryCategoryCityPage({
             <Link href={`/${basePath}`} className="hover:text-foreground">
               {site.vertical?.term_businesses ?? 'Directory'}
             </Link>
-            <ChevronRight className="h-4 w-4" />
-            <Link
-              href={`/${basePath}/${category.slug}`}
-              className="hover:text-foreground"
-            >
-              {category.name}
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">{city.name}</span>
+            {ctx.categoryList.length > 1 && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <Link
+                  href={`/${basePath}/${category.slug}`}
+                  className="hover:text-foreground"
+                >
+                  {category.name}
+                </Link>
+              </>
+            )}
+            {ctx.cityList.length > 1 && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <span className="text-foreground">{city.name}</span>
+              </>
+            )}
           </nav>
 
           <h1 className="text-3xl font-bold tracking-tight mb-2">
             {category.name} in {city.name}, {site.state?.code ?? ''}
           </h1>
           <p className="text-muted-foreground mb-6">
-            Browse {total.toLocaleString()} {businessTerm} for{' '}
-            {category.name.toLowerCase()} in {city.name}.
+            Browse {businessTerm} for {category.name.toLowerCase()} in{' '}
+            {city.name}.
           </p>
 
           {/* Search Form */}
@@ -92,15 +84,6 @@ export async function DirectoryCategoryCityPage({
         </div>
       </div>
 
-      <FeaturedBusinessesSection
-        businesses={featuredBusinesses}
-        title={`Featured ${category.name} in ${city.name}`}
-        basePath={basePath}
-        ctx={ctx}
-        categorySlug={category.slug}
-        citySlug={city.slug}
-      />
-
       {/* Business Listings */}
       <div className="py-16">
         <div className="mx-auto max-w-6xl px-4">
@@ -108,21 +91,73 @@ export async function DirectoryCategoryCityPage({
             {category.name} in {city.name}
           </h2>
 
-          <BusinessListings
-            initialBusinesses={businesses}
-            initialTotal={total}
-            initialHasMore={hasMore}
-            initialPage={page}
-            basePath={basePath}
-            ctx={ctx}
-            categorySlug={category.slug}
-            citySlug={city.slug}
-            loadMoreLabel={`Load More ${businessTermSingular}s`}
-            emptyMessage={`No ${businessTerm} found for ${category.name.toLowerCase()} in ${city.name}.`}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
+          <Suspense fallback={<BusinessListingsSkeleton />}>
+            <CategoryCityBusinessListings
+              siteId={site.id}
+              basePath={basePath}
+              ctx={ctx}
+              categorySlug={category.slug}
+              citySlug={city.slug}
+              page={page}
+              loadMoreLabel={`Load More ${businessTermSingular}s`}
+              emptyMessage={`No ${businessTerm} found for ${category.name.toLowerCase()} in ${city.name}.`}
+            />
+          </Suspense>
         </div>
       </div>
     </div>
+  );
+}
+
+interface CategoryCityBusinessListingsProps {
+  siteId: string;
+  basePath: string;
+  ctx: RouteContext;
+  categorySlug: string;
+  citySlug: string;
+  page: number;
+  loadMoreLabel: string;
+  emptyMessage: string;
+}
+
+async function CategoryCityBusinessListings({
+  siteId,
+  basePath,
+  ctx,
+  categorySlug,
+  citySlug,
+  page,
+  loadMoreLabel,
+  emptyMessage,
+}: CategoryCityBusinessListingsProps) {
+  const totalToFetch = page * ITEMS_PER_PAGE;
+  const [featuredBusinesses, { businesses, total, hasMore }] =
+    await Promise.all([
+      getFeaturedBusinesses(siteId, { categorySlug, citySlug }),
+      getBusinessesByCategoryAndCity(
+        siteId,
+        categorySlug,
+        citySlug,
+        1,
+        totalToFetch
+      ),
+    ]);
+
+  console.log('Featured Businesses:', featuredBusinesses);
+  return (
+    <BusinessListings
+      featuredBusinesses={featuredBusinesses}
+      initialBusinesses={businesses}
+      initialTotal={total}
+      initialHasMore={hasMore}
+      initialPage={page}
+      basePath={basePath}
+      ctx={ctx}
+      categorySlug={categorySlug}
+      citySlug={citySlug}
+      loadMoreLabel={loadMoreLabel}
+      emptyMessage={emptyMessage}
+      itemsPerPage={ITEMS_PER_PAGE}
+    />
   );
 }

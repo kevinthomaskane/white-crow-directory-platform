@@ -26,7 +26,7 @@ export function FilterChips({ chips, label, className }: FilterChipsProps) {
         </span>
       )}
       <div className="relative flex-1 min-w-0">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 pr-8">
           {chips.map((chip) => (
             <Link
               key={chip.href}

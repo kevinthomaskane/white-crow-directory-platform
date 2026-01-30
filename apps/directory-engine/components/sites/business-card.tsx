@@ -20,10 +20,10 @@ interface BusinessCardProps {
 }
 
 export function BusinessCard({
+  featured,
   business,
   href,
   className,
-  featured,
 }: BusinessCardProps) {
   // const providerLabel = formatProvider(business.reviewSource?.provider);
 
@@ -31,7 +31,10 @@ export function BusinessCard({
     <Link
       href={href}
       className={cn(
-        'group flex w-full gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md sm:gap-6',
+        'group flex w-full gap-4 rounded-lg border bg-card p-4 transition-all sm:gap-6',
+        featured
+          ? 'border-primary/50 shadow-md ring-1 ring-primary/20'
+          : 'border-border hover:border-primary/50 hover:shadow-md',
         className
       )}
     >
@@ -55,11 +58,18 @@ export function BusinessCard({
 
       {/* Content */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* Header row: Name + Badge */}
+        {/* Header row: Name + Badges */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
-            {business.name}
-          </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+              {business.name}
+            </h3>
+            {featured && (
+              <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                Featured
+              </span>
+            )}
+          </div>
           <ClaimBadge
             isClaimed={business.is_claimed}
             hasPlan={!!business.plan}
@@ -103,6 +113,16 @@ export function BusinessCard({
             </div>
           )}
         </div>
+
+        {/* CTA for featured cards */}
+        {featured && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
+              View Profile
+              <ExternalLink className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        )}
       </div>
     </Link>
   );
@@ -161,10 +181,10 @@ function ClaimBadge({
 }) {
   if (hasPlan) {
     return (
-      <div className="flex-shrink-0 rounded-full bg-amber-900/30 p-1 dark:bg-white">
+      <div className="flex-shrink-0 rounded-full bg-amber-400 p-1 dark:bg-white">
         <Check
           strokeWidth={4}
-          className="h-3.5 w-3.5 text-white dark:text-amber-600"
+          className="h-3.5 w-3.5 text-white dark:text-amber-400"
         />
       </div>
     );

@@ -91,7 +91,11 @@ export const getRouteContext = cache(
       .map((sc) => {
         const city = sc.city;
         return city
-          ? { slug: slugify(city.name), name: city.name, population: city.population }
+          ? {
+              slug: slugify(city.name),
+              name: city.name,
+              population: city.population,
+            }
           : null;
       })
       .filter((c): c is CityData => c !== null);
@@ -99,8 +103,6 @@ export const getRouteContext = cache(
     return {
       categoryList,
       cityList,
-      categories: new Set(categoryList.map((c) => c.slug)),
-      cities: new Set(cityList.map((c) => c.slug)),
     };
   }
 );
@@ -693,6 +695,11 @@ export const getFeaturedBusinesses = cache(
         .filter((s): s is string => s !== null)
     );
 
+    // Use !inner joins when filtering by category to ensure proper filtering
+    const businessCategoriesJoin = categorySlug
+      ? 'business_categories!inner(category:categories!inner(slug, name))'
+      : 'business_categories(category:categories(slug, name))';
+
     // Build query for businesses with a plan
     let query = supabase
       .from('site_businesses')
@@ -709,7 +716,7 @@ export const getFeaturedBusinesses = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories(category:categories(slug, name))
+          ${businessCategoriesJoin}
         )
       `
       )

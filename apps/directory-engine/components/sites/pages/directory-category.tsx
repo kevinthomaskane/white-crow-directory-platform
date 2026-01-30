@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type { SiteConfig, RouteContext, CategoryData } from '@/lib/types';
@@ -7,7 +8,7 @@ import {
 } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
 import { BusinessListings } from '@/components/sites/business-listings';
-import { FeaturedBusinessesSection } from '@/components/sites/sections/featured-businesses-section';
+import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
 
 interface DirectoryCategoryPageProps {
@@ -19,26 +20,16 @@ interface DirectoryCategoryPageProps {
 
 const ITEMS_PER_PAGE = 12;
 
-export async function DirectoryCategoryPage({
+export function DirectoryCategoryPage({
   site,
   ctx,
   category,
   page = 1,
 }: DirectoryCategoryPageProps) {
   const basePath = site.vertical?.slug ?? '';
-  const businessTerm =
-    site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
   const businessTermSingular = site.vertical?.term_business ?? 'Business';
 
   const hasMultipleCities = ctx.cityList.length > 1;
-
-  // Fetch featured businesses and regular listings in parallel
-  const totalToFetch = page * ITEMS_PER_PAGE;
-  const [featuredBusinesses, { businesses, total, hasMore }] =
-    await Promise.all([
-      getFeaturedBusinesses(site.id, { categorySlug: category.slug }),
-      getBusinessesByCategory(site.id, category.slug, 1, totalToFetch),
-    ]);
 
   return (
     <div>
@@ -58,8 +49,7 @@ export async function DirectoryCategoryPage({
             {category.name}
           </h1>
           <p className="text-muted-foreground mb-6">
-            Browse {total.toLocaleString()} results for{' '}
-            {category.name.toLowerCase()}{' '}
+            Browse results for {category.name.toLowerCase()}
             {hasMultipleCities ? ' across all locations' : ''}.
           </p>
 
@@ -72,14 +62,6 @@ export async function DirectoryCategoryPage({
           />
         </div>
       </div>
-
-      <FeaturedBusinessesSection
-        businesses={featuredBusinesses}
-        title={`Featured ${category.name}`}
-        basePath={basePath}
-        ctx={ctx}
-        categorySlug={category.slug}
-      />
 
       {/* Business Listings */}
       <div className="py-16">
@@ -105,20 +87,63 @@ export async function DirectoryCategoryPage({
             />
           )}
 
-          <BusinessListings
-            initialBusinesses={businesses}
-            initialTotal={total}
-            initialHasMore={hasMore}
-            initialPage={page}
-            basePath={basePath}
-            ctx={ctx}
-            categorySlug={category.slug}
-            loadMoreLabel={`Load More ${businessTermSingular}s`}
-            emptyMessage={`No ${businessTerm} found in this category.`}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
+          <Suspense fallback={<BusinessListingsSkeleton />}>
+            <CategoryBusinessListings
+              siteId={site.id}
+              basePath={basePath}
+              ctx={ctx}
+              categorySlug={category.slug}
+              page={page}
+              loadMoreLabel={`Load More ${businessTermSingular}s`}
+            />
+          </Suspense>
         </div>
       </div>
     </div>
+  );
+}
+
+interface CategoryBusinessListingsProps {
+  siteId: string;
+  basePath: string;
+  ctx: RouteContext;
+  categorySlug: string;
+  page: number;
+  loadMoreLabel: string;
+}
+
+async function CategoryBusinessListings({
+  siteId,
+  basePath,
+  ctx,
+  categorySlug,
+  page,
+  loadMoreLabel,
+}: CategoryBusinessListingsProps) {
+  const businessTerm =
+    ctx.categoryList.find((c) => c.slug === categorySlug)?.name.toLowerCase() ??
+    'businesses';
+
+  const totalToFetch = page * ITEMS_PER_PAGE;
+  const [featuredBusinesses, { businesses, total, hasMore }] =
+    await Promise.all([
+      getFeaturedBusinesses(siteId, { categorySlug }),
+      getBusinessesByCategory(siteId, categorySlug, 1, totalToFetch),
+    ]);
+
+  return (
+    <BusinessListings
+      featuredBusinesses={featuredBusinesses}
+      initialBusinesses={businesses}
+      initialTotal={total}
+      initialHasMore={hasMore}
+      initialPage={page}
+      basePath={basePath}
+      ctx={ctx}
+      categorySlug={categorySlug}
+      loadMoreLabel={loadMoreLabel}
+      emptyMessage={`No ${businessTerm} found in this category.`}
+      itemsPerPage={ITEMS_PER_PAGE}
+    />
   );
 }

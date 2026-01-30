@@ -14,13 +14,17 @@ export function parseRoute(
 
   const basePath = site.vertical?.slug ?? '';
 
+  // Build lookup Sets for O(1) validation
+  const categories = new Set(ctx.categoryList.map((c) => c.slug));
+  const cities = new Set(ctx.cityList.map((c) => c.slug));
+
   // Directory routes: first segment is base_path
   if (first === basePath) {
-    return parseDirectoryRoute(site, rest, ctx);
+    return parseDirectoryRoute(site, rest, categories, cities, ctx);
   }
 
   // Content routes: first segment is category (without base_path prefix)
-  if (ctx.categories.has(first)) {
+  if (categories.has(first)) {
     return parseContentRoute(first, rest);
   }
 
@@ -30,6 +34,8 @@ export function parseRoute(
 function parseDirectoryRoute(
   site: SiteConfig,
   segments: string[],
+  categories: Set<string>,
+  cities: Set<string>,
   ctx: RouteContext
 ): ParsedRoute | null {
   const basePath = site.vertical?.slug ?? '';
@@ -49,8 +55,8 @@ function parseDirectoryRoute(
   const [first, second, third, fourth] = segments;
 
   // First segment: must be category or city
-  const firstIsCategory = ctx.categories.has(first);
-  const firstIsCity = ctx.cities.has(first);
+  const firstIsCategory = categories.has(first);
+  const firstIsCity = cities.has(first);
 
   if (firstIsCategory && !singleCategory) {
     category = first;
@@ -62,8 +68,8 @@ function parseDirectoryRoute(
 
   // Second segment (if exists)
   if (second !== undefined) {
-    const secondIsCategory = ctx.categories.has(second);
-    const secondIsCity = ctx.cities.has(second);
+    const secondIsCategory = categories.has(second);
+    const secondIsCity = cities.has(second);
 
     if (category && secondIsCity && !singleCity) {
       city = second;

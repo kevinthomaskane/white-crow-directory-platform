@@ -59,7 +59,7 @@ export function BusinessMap({
               filter: ['!', ['has', 'point_count']],
               layout: {
                 'icon-image': 'pin',
-                'icon-size': 1,
+                'icon-size': 0.75,
                 'icon-allow-overlap': true,
                 'icon-anchor': 'bottom',
               },
@@ -226,11 +226,11 @@ export function BusinessMap({
               'circle-color': [
                 'step',
                 ['get', 'point_count'],
-                '#0284C7', // sky-600: small clusters
+                '#38bdf8', // sky-600: small clusters
                 10,
-                '#D97706', // amber-600: medium clusters
+                '#fbbf24',
                 30,
-                '#DC2626', // red-600: large clusters
+                '#f87171', // red-600: large clusters
               ],
               'circle-radius': [
                 'step',

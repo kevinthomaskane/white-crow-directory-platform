@@ -27,9 +27,9 @@ export function FeaturedBusinessesSection({
   const singleCategory = ctx.categoryList.length === 1;
 
   return (
-    <div className="py-16 bg-amber-50/50 dark:bg-amber-950/10">
+    <div className="py-16">
       <div className="mx-auto max-w-6xl px-4">
-        <h2 className="text-2xl font-bold tracking-tight mb-6">{title}</h2>
+        <p className="text-md font-medium tracking-tight mb-6">{title}</p>
         <div className="flex flex-col gap-4">
           {businesses.map((business) => (
             <BusinessCard

@@ -1,10 +1,11 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type { SiteConfig, RouteContext, CityData } from '@/lib/types';
 import { getBusinessesByCity, getFeaturedBusinesses } from '@/lib/data/site';
 import { SearchForm } from '@/components/sites/search-form';
 import { BusinessListings } from '@/components/sites/business-listings';
-import { FeaturedBusinessesSection } from '@/components/sites/sections/featured-businesses-section';
+import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
 
 interface DirectoryCityPageProps {
@@ -16,7 +17,7 @@ interface DirectoryCityPageProps {
 
 const ITEMS_PER_PAGE = 12;
 
-export async function DirectoryCityPage({
+export function DirectoryCityPage({
   site,
   ctx,
   city,
@@ -26,14 +27,6 @@ export async function DirectoryCityPage({
   const businessTerm =
     site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
   const businessTermSingular = site.vertical?.term_business ?? 'Business';
-
-  // Fetch featured businesses and regular listings in parallel
-  const totalToFetch = page * ITEMS_PER_PAGE;
-  const [featuredBusinesses, { businesses, total, hasMore }] =
-    await Promise.all([
-      getFeaturedBusinesses(site.id, { citySlug: city.slug }),
-      getBusinessesByCity(site.id, city.slug, 1, totalToFetch),
-    ]);
 
   return (
     <div>
@@ -54,7 +47,7 @@ export async function DirectoryCityPage({
             {site.state?.code ?? ''}
           </h1>
           <p className="text-muted-foreground mb-6">
-            Browse {total.toLocaleString()} {businessTerm} in {city.name}.
+            Browse {businessTerm} in {city.name}.
           </p>
 
           {/* Search Form */}
@@ -66,14 +59,6 @@ export async function DirectoryCityPage({
           />
         </div>
       </div>
-
-      <FeaturedBusinessesSection
-        businesses={featuredBusinesses}
-        title={`Featured ${site.vertical?.term_businesses ?? 'Businesses'} in ${city.name}`}
-        basePath={basePath}
-        ctx={ctx}
-        citySlug={city.slug}
-      />
 
       {/* Business Listings */}
       <div className="py-16">
@@ -99,20 +84,62 @@ export async function DirectoryCityPage({
             />
           )}
 
-          <BusinessListings
-            initialBusinesses={businesses}
-            initialTotal={total}
-            initialHasMore={hasMore}
-            initialPage={page}
-            basePath={basePath}
-            ctx={ctx}
-            citySlug={city.slug}
-            loadMoreLabel={`Load More ${businessTermSingular}s`}
-            emptyMessage={`No ${businessTerm} found in ${city.name}.`}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
+          <Suspense fallback={<BusinessListingsSkeleton />}>
+            <CityBusinessListings
+              siteId={site.id}
+              basePath={basePath}
+              ctx={ctx}
+              citySlug={city.slug}
+              page={page}
+              loadMoreLabel={`Load More ${businessTermSingular}s`}
+              emptyMessage={`No ${businessTerm} found in ${city.name}.`}
+            />
+          </Suspense>
         </div>
       </div>
     </div>
+  );
+}
+
+interface CityBusinessListingsProps {
+  siteId: string;
+  basePath: string;
+  ctx: RouteContext;
+  citySlug: string;
+  page: number;
+  loadMoreLabel: string;
+  emptyMessage: string;
+}
+
+async function CityBusinessListings({
+  siteId,
+  basePath,
+  ctx,
+  citySlug,
+  page,
+  loadMoreLabel,
+  emptyMessage,
+}: CityBusinessListingsProps) {
+  const totalToFetch = page * ITEMS_PER_PAGE;
+  const [featuredBusinesses, { businesses, total, hasMore }] =
+    await Promise.all([
+      getFeaturedBusinesses(siteId, { citySlug }),
+      getBusinessesByCity(siteId, citySlug, 1, totalToFetch),
+    ]);
+
+  return (
+    <BusinessListings
+      featuredBusinesses={featuredBusinesses}
+      initialBusinesses={businesses}
+      initialTotal={total}
+      initialHasMore={hasMore}
+      initialPage={page}
+      basePath={basePath}
+      ctx={ctx}
+      citySlug={citySlug}
+      loadMoreLabel={loadMoreLabel}
+      emptyMessage={emptyMessage}
+      itemsPerPage={ITEMS_PER_PAGE}
+    />
   );
 }
