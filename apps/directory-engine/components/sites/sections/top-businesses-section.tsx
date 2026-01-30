@@ -64,7 +64,7 @@ async function BusinessCards({
   ctx,
   limit,
 }: BusinessCardsProps) {
-  const businesses = await getTopBusinesses(siteId, limit);
+  const businesses = await getTopBusinesses(siteId, ctx.categoryList, limit);
 
   if (businesses.length === 0) {
     return null;

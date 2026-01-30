@@ -32,8 +32,15 @@ export type SiteConfig = Pick<
   state: Pick<State, 'code'> | null;
 };
 
-export type CategoryData = { slug: string; name: string };
-export type CityData = { slug: string; name: string; population: number | null };
+export type CategoryData = { id: string; slug: string; name: string };
+export type CityData = {
+  id: string;
+  slug: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  population: number | null;
+};
 
 export interface RouteContext {
   categoryList: CategoryData[];
@@ -103,7 +110,7 @@ export type ActionsResponse<T> =
  * Business hours as an array of weekday descriptions
  * e.g., ["Monday: 9:00 AM – 5:00 PM", "Tuesday: 9:00 AM – 5:00 PM", ...]
  */
-export type BusinessHours = string[];
+export type BusinessHours = string[] | null;
 
 export type SiteAssetType = 'hero' | 'logo' | 'favicon';
 
@@ -166,12 +173,12 @@ export type BusinessDetailData = Pick<
   | 'phone'
   | 'website'
   | 'main_photo_name'
-  | 'hours'
   | 'latitude'
   | 'longitude'
 > &
-  Pick<SiteBusiness, 'is_claimed' | 'description'> & {
+  Pick<SiteBusiness, 'is_claimed' | 'description' | 'plan'> & {
     site_business_id: string;
+    hours: BusinessHours;
     categories: CategoryData[];
     reviewSources: Pick<
       BusinessReviewSource,

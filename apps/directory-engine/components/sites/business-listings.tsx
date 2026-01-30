@@ -68,7 +68,12 @@ export function BusinessListings({
       case 'category':
         return fetchCategoryBusinesses(categorySlug!, nextPage, itemsPerPage);
       case 'city':
-        return fetchCityBusinesses(citySlug!, nextPage, itemsPerPage);
+        return fetchCityBusinesses(
+          ctx.categoryList,
+          citySlug!,
+          nextPage,
+          itemsPerPage
+        );
       case 'category-city':
         return fetchCategoryCityBusinesses(
           categorySlug!,

@@ -1,7 +1,7 @@
 'use server';
 
 import { getSiteConfig, getBusinessesByCity } from '@/lib/data/site';
-import type { ActionsResponse, BusinessCardData } from '@/lib/types';
+import type { ActionsResponse, BusinessCardData, CategoryData } from '@/lib/types';
 
 export interface CityBusinessesData {
   businesses: BusinessCardData[];
@@ -10,6 +10,7 @@ export interface CityBusinessesData {
 }
 
 export async function fetchCityBusinesses(
+  categoryList: CategoryData[],
   citySlug: string,
   page: number,
   limit: number
@@ -20,7 +21,13 @@ export async function fetchCityBusinesses(
   }
 
   try {
-    const result = await getBusinessesByCity(site.id, citySlug, page, limit);
+    const result = await getBusinessesByCity(
+      site.id,
+      categoryList,
+      citySlug,
+      page,
+      limit
+    );
     return { ok: true, data: result };
   } catch (error) {
     console.error('Failed to fetch city businesses:', error);

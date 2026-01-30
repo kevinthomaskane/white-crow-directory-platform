@@ -1,40 +1,43 @@
-import { cn, slugify } from '@/lib/utils';
+import { cn, slugify, buildDirectoryUrl } from '@/lib/utils';
+import { getRelatedBusinesses } from '@/lib/data/site';
 import { BusinessCard } from '@/components/sites/business-card';
-import type { BusinessCardData } from '@/lib/types';
+import type { CategoryData } from '@/lib/types';
 
 interface RelatedBusinessesSectionProps {
-  businesses: BusinessCardData[];
+  siteId: string;
+  categoryList: CategoryData[];
+  businessId: string;
+  categorySlug: string | null;
+  cityName: string | null;
   basePath: string;
-  hasMultipleCategories: boolean;
-  hasMultipleCities: boolean;
+  singleCategory: boolean;
+  singleCity: boolean;
   title?: string;
   className?: string;
 }
 
-export function RelatedBusinessesSection({
-  businesses,
+export async function RelatedBusinessesSection({
+  siteId,
+  categoryList,
+  businessId,
+  categorySlug,
+  cityName,
   basePath,
-  hasMultipleCategories,
-  hasMultipleCities,
+  singleCategory,
+  singleCity,
   title = 'Similar Businesses',
   className,
 }: RelatedBusinessesSectionProps) {
+  const businesses = await getRelatedBusinesses(
+    siteId,
+    categoryList,
+    businessId,
+    categorySlug,
+    cityName,
+    6
+  );
+
   if (businesses.length === 0) return null;
-
-  const buildBusinessUrl = (business: BusinessCardData) => {
-    const parts = [basePath];
-
-    if (hasMultipleCategories && business.category) {
-      parts.push(business.category.slug);
-    }
-
-    if (hasMultipleCities && business.city) {
-      parts.push(slugify(business.city));
-    }
-
-    parts.push(business.id);
-    return '/' + parts.join('/');
-  };
 
   return (
     <section className={cn('w-full py-12', className)}>
@@ -44,7 +47,14 @@ export function RelatedBusinessesSection({
           <BusinessCard
             key={business.id}
             business={business}
-            href={buildBusinessUrl(business)}
+            href={buildDirectoryUrl({
+              basePath,
+              categorySlug: business.category?.slug,
+              citySlug: business.city ? slugify(business.city) : undefined,
+              businessId: business.id,
+              singleCategory,
+              singleCity,
+            })}
           />
         ))}
       </div>

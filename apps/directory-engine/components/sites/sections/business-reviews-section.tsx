@@ -1,11 +1,12 @@
 import Image from 'next/image';
 import { Star, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getBusinessReviews } from '@/lib/data/site';
 import { RatingStars, formatProvider } from '@/components/sites/business-card';
 import type { BusinessReviewData } from '@/lib/types';
 
 interface BusinessReviewsSectionProps {
-  reviews: BusinessReviewData[];
+  businessId: string;
   reviewSources: {
     rating: number | null;
     provider: string;
@@ -15,11 +16,12 @@ interface BusinessReviewsSectionProps {
   className?: string;
 }
 
-export function BusinessReviewsSection({
-  reviews,
+export async function BusinessReviewsSection({
+  businessId,
   reviewSources,
   className,
 }: BusinessReviewsSectionProps) {
+  const reviews = await getBusinessReviews(businessId);
   const primarySource = reviewSources[0];
   const totalReviews = reviewSources.reduce(
     (sum, source) => sum + (source.review_count ?? 0),
@@ -44,28 +46,6 @@ export function BusinessReviewsSection({
               </p>
             </div>
           </div>
-
-          {/* Source breakdown */}
-          {reviewSources.length > 0 && (
-            <div className="flex flex-wrap gap-3 sm:ml-auto">
-              {reviewSources.map((source, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span>
-                    {source.rating} on {formatProvider(source.provider)}
-                  </span>
-                  {source.review_count && (
-                    <span className="text-muted-foreground/70">
-                      ({source.review_count})
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

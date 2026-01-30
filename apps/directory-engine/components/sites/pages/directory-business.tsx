@@ -1,22 +1,19 @@
-import { Suspense } from 'react';
+import { Fragment, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Building2, MapPin, Loader2 } from 'lucide-react';
-import type { SiteConfig, RouteContext, BusinessDetailData } from '@/lib/types';
-import { getBusinessImageUrl } from '@/lib/utils';
-import {
-  getBusinessDetails,
-  getBusinessReviews,
-  getRelatedBusinesses,
-} from '@/lib/data/site';
-import { Badge } from '@/components/ui/badge';
-import { RatingStars, formatProvider } from '@/components/sites/business-card';
+import { ChevronRight, Building2, MapPin, Loader2, Dot } from 'lucide-react';
+import type { SiteConfig, RouteContext } from '@/lib/types';
+import { getBusinessImageUrl, buildDirectoryUrl } from '@/lib/utils';
+import { getBusinessDetails } from '@/lib/data/site';
+import { RatingStars } from '@/components/sites/business-card';
 import { ClaimBusinessBanner } from '@/components/sites/sections/claim-business-banner';
 import { ClaimBusinessButton } from '@/components/sites/claim/claim-business-button';
 import { BusinessReviewsSection } from '@/components/sites/sections/business-reviews-section';
 import { BusinessContactCard } from '@/components/sites/sections/business-contact-card';
 import { RelatedBusinessesSection } from '@/components/sites/sections/related-businesses-section';
+import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
+import { ClaimBadge } from '../claim-badge';
 
 interface DirectoryBusinessPageProps {
   site: SiteConfig;
@@ -38,11 +35,11 @@ export async function DirectoryBusinessPage({
   const businessTermPlural =
     site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
 
-  const hasMultipleCategories = ctx.categoryList.length > 1;
-  const hasMultipleCities = ctx.cityList.length > 1;
+  const singleCategory = ctx.categoryList.length === 1;
+  const singleCity = ctx.cityList.length === 1;
 
   // Fetch business details (critical for page render)
-  const business = await getBusinessDetails(site.id, businessId);
+  const business = await getBusinessDetails(site.id, ctx.categoryList, businessId);
 
   if (!business) return notFound();
 
@@ -51,40 +48,48 @@ export async function DirectoryBusinessPage({
   const cityData = ctx.cityList.find((c) => c.slug === city);
   const primaryReviewSource = business.reviewSources[0];
 
-  // Build breadcrumb links
-  const buildCategoryUrl = () => `/${basePath}/${category}`;
-  const buildCityUrl = () => {
-    if (hasMultipleCategories) {
-      return `/${basePath}/${category}/${city}`;
-    }
-    return `/${basePath}/${city}`;
-  };
-
   return (
     <div>
       {/* Header */}
-      <div className="bg-muted/30 py-12 px-4">
-        <div className="mx-auto max-w-6xl">
+      <div className="bg-muted/30 py-12">
+        <div className="mx-auto max-w-6xl px-4">
           {/* Breadcrumb */}
           <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Link href={`/${basePath}`} className="hover:text-foreground">
+            <Link
+              href={buildDirectoryUrl({ basePath, singleCity, singleCategory })}
+              className="hover:text-foreground"
+            >
               {site.vertical?.term_businesses ?? 'Directory'}
             </Link>
-            {categoryData && (
+            {categoryData && !singleCategory && (
               <>
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
                 <Link
-                  href={buildCategoryUrl()}
+                  href={buildDirectoryUrl({
+                    basePath,
+                    categorySlug: category,
+                    singleCity,
+                    singleCategory,
+                  })}
                   className="hover:text-foreground"
                 >
                   {categoryData.name}
                 </Link>
               </>
             )}
-            {cityData && (
+            {cityData && !singleCity && (
               <>
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
-                <Link href={buildCityUrl()} className="hover:text-foreground">
+                <Link
+                  href={buildDirectoryUrl({
+                    basePath,
+                    categorySlug: category,
+                    citySlug: city,
+                    singleCity,
+                    singleCategory,
+                  })}
+                  className="hover:text-foreground"
+                >
                   {cityData.name}, {site.state?.code ?? ''}
                 </Link>
               </>
@@ -99,16 +104,14 @@ export async function DirectoryBusinessPage({
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div className="flex-1">
               {/* Title + Badge */}
-              <div className="flex flex-wrap items-start gap-3 mb-3">
+              <div className="flex flex-wrap items-center gap-3 mb-3">
                 <h1 className="text-3xl font-bold tracking-tight">
                   {business.name}
                 </h1>
-                <Badge
-                  variant={business.is_claimed ? 'default' : 'outline'}
-                  className="flex-shrink-0"
-                >
-                  {business.is_claimed ? 'Verified' : 'Unclaimed'}
-                </Badge>
+                <ClaimBadge
+                  isClaimed={business.is_claimed}
+                  hasPlan={!!business.plan}
+                />
               </div>
 
               {/* Rating */}
@@ -119,8 +122,7 @@ export async function DirectoryBusinessPage({
                   </span>
                   <RatingStars rating={primaryReviewSource.rating} />
                   <span className="text-muted-foreground">
-                    ({primaryReviewSource.review_count ?? 0} reviews on{' '}
-                    {formatProvider(primaryReviewSource.provider)})
+                    ({primaryReviewSource.review_count ?? 0} reviews)
                   </span>
                 </div>
               )}
@@ -128,15 +130,29 @@ export async function DirectoryBusinessPage({
               {/* Categories */}
               {business.categories.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {business.categories.map((cat) => (
-                    <Link
-                      key={cat.slug}
-                      href={`/${basePath}/${cat.slug}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
+                  {business.categories.map((cat, i, self) => {
+                    return (
+                      <Fragment key={cat.slug}>
+                        <Link
+                          key={cat.slug}
+                          href={buildDirectoryUrl({
+                            basePath,
+                            categorySlug: cat.slug,
+                            singleCity,
+                            singleCategory,
+                          })}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {cat.name}
+                        </Link>
+                        <Dot
+                          className={`h-4 w-4 self-center ${
+                            i === self.length - 1 ? 'hidden' : 'block'
+                          }`}
+                        />
+                      </Fragment>
+                    );
+                  })}
                 </div>
               )}
 
@@ -167,8 +183,8 @@ export async function DirectoryBusinessPage({
       </div>
 
       {/* Main Content */}
-      <div className="py-12 px-4">
-        <div className="mx-auto max-w-6xl">
+      <div className="py-12">
+        <div className="mx-auto max-w-6xl px-4">
           {/* Claim Banner - Prominent */}
           {!business.is_claimed && (
             <ClaimBusinessBanner
@@ -224,7 +240,7 @@ export async function DirectoryBusinessPage({
 
               {/* Reviews Section - Suspense */}
               <Suspense fallback={<ReviewsSkeleton />}>
-                <AsyncReviewsSection
+                <BusinessReviewsSection
                   businessId={businessId}
                   reviewSources={business.reviewSources}
                 />
@@ -289,77 +305,34 @@ export async function DirectoryBusinessPage({
           </div>
 
           {/* Related Businesses - Suspense */}
-          <Suspense fallback={<RelatedBusinessesSkeleton />}>
-            <AsyncRelatedBusinesses
-              siteId={site.id}
-              businessId={businessId}
-              businessCity={business.city}
-              categorySlug={hasMultipleCategories ? category : null}
-              basePath={basePath}
-              hasMultipleCategories={hasMultipleCategories}
-              hasMultipleCities={hasMultipleCities}
-              title={`Similar ${businessTermPlural} in ${
-                cityData?.name ?? business.city ?? 'your area'
-              }`}
-            />
-          </Suspense>
+          {!business.plan && (
+            <Suspense
+              fallback={
+                <BusinessListingsSkeleton
+                  title="Similar Businesses"
+                  count={6}
+                  className="py-12"
+                />
+              }
+            >
+              <RelatedBusinessesSection
+                siteId={site.id}
+                categoryList={ctx.categoryList}
+                businessId={businessId}
+                categorySlug={!singleCategory ? category : null}
+                cityName={business.city}
+                basePath={basePath}
+                singleCategory={singleCategory}
+                singleCity={singleCity}
+                title={`Similar ${businessTermPlural} in ${
+                  cityData?.name ?? business.city ?? 'your area'
+                }`}
+              />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>
-  );
-}
-
-// Async component for reviews
-async function AsyncReviewsSection({
-  businessId,
-  reviewSources,
-}: {
-  businessId: string;
-  reviewSources: BusinessDetailData['reviewSources'];
-}) {
-  const reviews = await getBusinessReviews(businessId);
-
-  return (
-    <BusinessReviewsSection reviews={reviews} reviewSources={reviewSources} />
-  );
-}
-
-// Async component for related businesses
-async function AsyncRelatedBusinesses({
-  siteId,
-  businessId,
-  businessCity,
-  categorySlug,
-  basePath,
-  hasMultipleCategories,
-  hasMultipleCities,
-  title,
-}: {
-  siteId: string;
-  businessId: string;
-  businessCity: string | null;
-  categorySlug: string | null;
-  basePath: string;
-  hasMultipleCategories: boolean;
-  hasMultipleCities: boolean;
-  title: string;
-}) {
-  const relatedBusinesses = await getRelatedBusinesses(
-    siteId,
-    businessId,
-    categorySlug,
-    businessCity,
-    6
-  );
-
-  return (
-    <RelatedBusinessesSection
-      businesses={relatedBusinesses}
-      basePath={basePath}
-      hasMultipleCategories={hasMultipleCategories}
-      hasMultipleCities={hasMultipleCities}
-      title={title}
-    />
   );
 }
 
@@ -369,19 +342,6 @@ function ReviewsSkeleton() {
     <section className="rounded-lg border border-border bg-card p-6">
       <h2 className="text-xl font-semibold mb-4">Reviews</h2>
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    </section>
-  );
-}
-
-function RelatedBusinessesSkeleton() {
-  return (
-    <section className="w-full py-12">
-      <h2 className="text-2xl font-bold tracking-tight mb-6">
-        Similar Businesses
-      </h2>
-      <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     </section>

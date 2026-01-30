@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Star, Bell, TrendingUp } from 'lucide-react';
+import { CheckCircle2, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ClaimBusinessModal } from '@/components/sites/claim/claim-business-modal';
@@ -27,14 +27,6 @@ export function ClaimBusinessBanner({
       text: 'Update business hours, photos, and contact info',
     },
     {
-      icon: Star,
-      text: 'Respond to customer reviews',
-    },
-    {
-      icon: Bell,
-      text: 'Get notified of new reviews',
-    },
-    {
       icon: TrendingUp,
       text: 'Boost visibility in search results',
     },
@@ -54,7 +46,7 @@ export function ClaimBusinessBanner({
               <h2 className="text-xl font-semibold">Is this your business?</h2>
               <p className="text-muted-foreground mt-1">
                 Claim your free listing to update information and connect with
-                customers
+                more customers
               </p>
             </div>
 

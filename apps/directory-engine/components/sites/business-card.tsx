@@ -7,10 +7,11 @@ import {
   Globe,
   MapPin,
   ExternalLink,
-  Check,
 } from 'lucide-react';
 import { cn, getBusinessImageUrl } from '@/lib/utils';
 import type { BusinessCardData } from '@/lib/types';
+import { ClaimBadge } from './claim-badge';
+import { Button } from '../ui/button';
 
 interface BusinessCardProps {
   business: BusinessCardData;
@@ -26,10 +27,11 @@ export function BusinessCard({
   className,
 }: BusinessCardProps) {
   // const providerLabel = formatProvider(business.reviewSource?.provider);
+  const showContactCtaRow =
+    business.plan && (business.phone || business.website);
 
   return (
-    <Link
-      href={href}
+    <div
       className={cn(
         'group flex w-full gap-4 rounded-lg border bg-card p-4 transition-all sm:gap-6',
         featured
@@ -39,30 +41,33 @@ export function BusinessCard({
       )}
     >
       {/* Image */}
-      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:h-32 sm:w-32">
-        {getBusinessImageUrl(business.main_photo_name) ? (
-          <Image
-            src={getBusinessImageUrl(business.main_photo_name)!}
-            alt={business.name}
-            fill
-            sizes="(max-width: 640px) 96px, 128px"
-            className="object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Building2 className="h-10 w-10 text-muted-foreground" />
-          </div>
-        )}
-      </div>
-
+      {business.plan && (
+        <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:h-32 sm:w-32">
+          {getBusinessImageUrl(business.main_photo_name) ? (
+            <Image
+              src={getBusinessImageUrl(business.main_photo_name)!}
+              alt={business.name}
+              fill
+              sizes="(max-width: 640px) 96px, 128px"
+              className="object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Building2 className="h-10 w-10 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      )}
       {/* Content */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header row: Name + Badges */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
-              {business.name}
+            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary hover:underline transition-colors line-clamp-1">
+              <Link href={href} aria-label={business.name}>
+                {business.name}
+              </Link>
             </h3>
             {featured && (
               <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -77,11 +82,17 @@ export function BusinessCard({
         </div>
 
         {/* Rating row */}
-        {business.reviewSource?.rating && (
-          <div className="mt-1 flex items-center gap-1.5 text-sm">
-            <span className="font-medium">{business.reviewSource.rating}</span>
-            <RatingStars rating={business.reviewSource.rating} />
-          </div>
+        {business.plan && (
+          <>
+            {business.reviewSource?.rating && (
+              <div className="mt-1 flex items-center gap-1.5 text-sm">
+                <span className="font-medium">
+                  {business.reviewSource.rating}
+                </span>
+                <RatingStars rating={business.reviewSource.rating} />
+              </div>
+            )}
+          </>
         )}
 
         {/* Category and City */}
@@ -90,41 +101,48 @@ export function BusinessCard({
         </div>
 
         {/* Contact info row */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+        <div className="mt-2 flex flex-col gap-4 text-sm text-muted-foreground">
           {business.formatted_address && (
             <div className="flex items-center gap-1 line-clamp-1">
               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
               <span className="truncate">{business.formatted_address}</span>
             </div>
           )}
-          {business.phone && (
-            <div className="flex items-center gap-1">
-              <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-              <span>{business.phone}</span>
-            </div>
-          )}
-          {business.website && (
-            <div className="flex items-center gap-1">
-              <Globe className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="truncate max-w-[150px]">
-                {formatWebsiteDisplay(business.website)}
-              </span>
-              <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-50" />
+          {showContactCtaRow && (
+            <div className="flex flex-wrap gap-2">
+              {business.phone && business.plan && (
+                <a
+                  href={`tel:${business.phone}`}
+                  rel="noopener noreferrer"
+                  aria-label="phone number"
+                >
+                  <Button className="inline-flex" variant="outline">
+                    <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                    {business.phone}
+                  </Button>
+                </a>
+              )}
+              {business.website && business.website && (
+                <a
+                  href={`${business.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="website"
+                >
+                  <Button className="inline-flex" variant="outline">
+                    <Globe className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate max-w-[150px]">
+                      {formatWebsiteDisplay(business.website)}
+                    </span>
+                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                  </Button>
+                </a>
+              )}
             </div>
           )}
         </div>
-
-        {/* CTA for featured cards */}
-        {featured && (
-          <div className="mt-3 pt-3 border-t border-border">
-            <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
-              View Profile
-              <ExternalLink className="h-3.5 w-3.5" />
-            </span>
-          </div>
-        )}
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -170,42 +188,6 @@ function formatWebsiteDisplay(url: string): string {
   } catch {
     return url;
   }
-}
-
-function ClaimBadge({
-  isClaimed,
-  hasPlan,
-}: {
-  isClaimed: boolean | null;
-  hasPlan: boolean;
-}) {
-  if (hasPlan) {
-    return (
-      <div className="flex-shrink-0 rounded-full bg-amber-400 p-1 dark:bg-white">
-        <Check
-          strokeWidth={4}
-          className="h-3.5 w-3.5 text-white dark:text-amber-400"
-        />
-      </div>
-    );
-  }
-
-  if (isClaimed) {
-    return (
-      <div className="flex-shrink-0 rounded-full bg-green-400 p-1 dark:bg-white">
-        <Check
-          strokeWidth={4}
-          className="h-3.5 w-3.5 text-white dark:text-green-400"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-shrink-0 rounded-full bg-gray-300 p-1">
-      <Check strokeWidth={4} className="h-3.5 w-3.5 text-white" />
-    </div>
-  );
 }
 
 export { RatingStars, formatProvider };

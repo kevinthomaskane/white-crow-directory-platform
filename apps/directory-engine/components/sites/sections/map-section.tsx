@@ -45,7 +45,9 @@ async function MapSectionContent({
     );
   }
 
-  const mapData = await getInitialMapData(siteId);
+  // already sorted by population
+  const city = ctx.cityList[0];
+  const mapData = await getInitialMapData({ siteId, city });
 
   if (!mapData) {
     return null;

@@ -13,20 +13,15 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import type { BusinessDetailData } from '@/lib/types';
 
-interface BusinessContactCardProps {
-  phone: string | null;
-  website: string | null;
-  formattedAddress: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  hours: unknown;
+type BusinessContactCardProps = Pick<
+  BusinessDetailData,
+  'phone' | 'website' | 'latitude' | 'longitude' | 'hours'
+> & {
   className?: string;
-}
-
-interface HoursData {
-  weekday_text?: string[];
-}
+  formattedAddress: BusinessDetailData['formatted_address'];
+};
 
 const DAY_ORDER = [
   'Sunday',
@@ -48,8 +43,7 @@ export function BusinessContactCard({
   className,
 }: BusinessContactCardProps) {
   const [showAllHours, setShowAllHours] = useState(false);
-  const hoursData = hours as HoursData | null;
-  const weekdayText = hoursData?.weekday_text ?? [];
+  const weekdayText = hours ?? [];
 
   const today = new Date().getDay();
   const todayName = DAY_ORDER[today];
@@ -110,10 +104,7 @@ export function BusinessContactCard({
         {phone && (
           <div className="flex gap-3 text-sm">
             <Phone className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-            <a
-              href={`tel:${phone}`}
-              className="text-primary hover:underline"
-            >
+            <a href={`tel:${phone}`} className="text-primary hover:underline">
               {phone}
             </a>
           </div>

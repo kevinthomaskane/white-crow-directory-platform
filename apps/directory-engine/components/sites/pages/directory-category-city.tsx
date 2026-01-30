@@ -133,7 +133,7 @@ async function CategoryCityBusinessListings({
   const totalToFetch = page * ITEMS_PER_PAGE;
   const [featuredBusinesses, { businesses, total, hasMore }] =
     await Promise.all([
-      getFeaturedBusinesses(siteId, { categorySlug, citySlug }),
+      getFeaturedBusinesses(siteId, ctx.categoryList, { categorySlug, citySlug }),
       getBusinessesByCategoryAndCity(
         siteId,
         categorySlug,

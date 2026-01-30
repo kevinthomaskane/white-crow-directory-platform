@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSiteConfig, getSiteFormOptions } from '@/lib/data/site';
+import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 import { SubmitBusinessForm } from '@/components/sites/submit-business/submit-business-form';
 
 export default async function SubmitBusinessPage() {
@@ -9,7 +9,13 @@ export default async function SubmitBusinessPage() {
     redirect('/');
   }
 
-  const { categories, cities } = await getSiteFormOptions(siteConfig);
+  const { categoryList, cityList } = await getRouteContext(siteConfig);
+
+  // Sort alphabetically for the form (getRouteContext sorts cities by population)
+  const categories = [...categoryList].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const cities = [...cityList].sort((a, b) => a.name.localeCompare(b.name));
 
   const termBusiness = siteConfig.vertical?.term_business || 'Business';
 

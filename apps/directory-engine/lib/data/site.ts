@@ -13,6 +13,7 @@ import type {
   MapBounds,
   BusinessDetailData,
   BusinessReviewData,
+  BusinessHours,
 } from '@/lib/types';
 
 export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
@@ -71,11 +72,11 @@ export const getRouteContext = cache(
     const [siteCategories, siteCities] = await Promise.all([
       supabase
         .from('site_categories')
-        .select('category:categories(slug, name)')
+        .select('category:categories(id, slug, name)')
         .eq('site_id', site.id),
       supabase
         .from('site_cities')
-        .select('city:cities(name, population)')
+        .select('city:cities(id, name, population, latitude, longitude)')
         .eq('site_id', site.id)
         .order('city(population)', { ascending: false, nullsFirst: false }),
     ]);
@@ -83,7 +84,7 @@ export const getRouteContext = cache(
     const categoryList: CategoryData[] = (siteCategories.data || [])
       .map((sc) => {
         const cat = sc.category;
-        return cat ? { slug: cat.slug, name: cat.name } : null;
+        return cat ? { id: cat.id, slug: cat.slug, name: cat.name } : null;
       })
       .filter((c): c is CategoryData => c !== null);
 
@@ -92,8 +93,11 @@ export const getRouteContext = cache(
         const city = sc.city;
         return city
           ? {
+              id: city.id,
               slug: slugify(city.name),
               name: city.name,
+              latitude: city.latitude,
+              longitude: city.longitude,
               population: city.population,
             }
           : null;
@@ -104,49 +108,6 @@ export const getRouteContext = cache(
       categoryList,
       cityList,
     };
-  }
-);
-
-export interface SiteFormOptions {
-  categories: { id: string; name: string }[];
-  cities: { id: string; name: string }[];
-}
-
-export const getSiteFormOptions = cache(
-  async (site: SiteConfig): Promise<SiteFormOptions> => {
-    const supabase = createServiceRoleClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!
-    );
-
-    const [categoriesResult, citiesResult] = await Promise.all([
-      supabase
-        .from('site_categories')
-        .select('category:categories(id, name)')
-        .eq('site_id', site.id),
-      supabase
-        .from('site_cities')
-        .select('city:cities(id, name)')
-        .eq('site_id', site.id),
-    ]);
-
-    const categories = (categoriesResult.data || [])
-      .map((sc) => {
-        const cat = sc.category as { id: string; name: string } | null;
-        return cat ? { id: cat.id, name: cat.name } : null;
-      })
-      .filter((c): c is { id: string; name: string } => c !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    const cities = (citiesResult.data || [])
-      .map((sc) => {
-        const city = sc.city as { id: string; name: string } | null;
-        return city ? { id: city.id, name: city.name } : null;
-      })
-      .filter((c): c is { id: string; name: string } => c !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    return { categories, cities };
   }
 );
 
@@ -171,23 +132,17 @@ export const getSiteStats = cache(
 );
 
 export const getTopBusinesses = cache(
-  async (siteId: string, limit = 10): Promise<BusinessCardData[]> => {
+  async (
+    siteId: string,
+    categoryList: CategoryData[],
+    limit = 10
+  ): Promise<BusinessCardData[]> => {
     const supabase = createServiceRoleClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SECRET_KEY!
     );
 
-    // Get site's category slugs first
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug)')
-      .eq('site_id', siteId);
-
-    const siteCategorySlugs = new Set(
-      (siteCategories || [])
-        .map((sc) => sc.category?.slug)
-        .filter((s): s is string => s !== null)
-    );
+    const siteCategorySlugs = new Set(categoryList.map((c) => c.slug));
 
     // Fetch all site businesses with their details
     const { data } = await supabase
@@ -205,7 +160,7 @@ export const getTopBusinesses = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories(category:categories(slug, name))
+          business_categories(category:categories(id, slug, name))
         )
       `
       )
@@ -230,6 +185,7 @@ export const getTopBusinesses = cache(
         );
         const category = matchingCategoryJoin?.category
           ? {
+              id: matchingCategoryJoin.category.id,
               slug: matchingCategoryJoin.category.slug,
               name: matchingCategoryJoin.category.name,
             }
@@ -267,31 +223,21 @@ export interface InitialMapData {
   businesses: MapBusinessData[];
 }
 
+type GetInitialMapDataParams = {
+  siteId: string;
+  limit?: number;
+  city: CityData;
+};
 export const getInitialMapData = cache(
-  async (siteId: string, limit = 200): Promise<InitialMapData | null> => {
+  async ({
+    siteId,
+    limit = 200,
+    city,
+  }: GetInitialMapDataParams): Promise<InitialMapData | null> => {
     const supabase = createServiceRoleClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SECRET_KEY!
     );
-
-    // Get the most populous city for this site
-    const { data: cityData } = await supabase
-      .from('site_cities')
-      .select('city:cities(id, name, latitude, longitude, population)')
-      .eq('site_id', siteId)
-      .order('city(population)', { ascending: false, nullsFirst: false })
-      .limit(1)
-      .single();
-
-    if (!cityData?.city) return null;
-
-    const city = cityData.city as {
-      id: string;
-      name: string;
-      latitude: number;
-      longitude: number;
-      population: number | null;
-    };
 
     // Get businesses in this city
     const { data: businessData } = await supabase
@@ -407,7 +353,7 @@ export const getBusinessesByCategory = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories!inner(category:categories!inner(slug, name))
+          business_categories!inner(category:categories!inner(id, slug, name))
         )
       `
       )
@@ -428,6 +374,7 @@ export const getBusinessesByCategory = cache(
         const categoryJoin = business.business_categories?.[0];
         const category = categoryJoin?.category
           ? {
+              id: categoryJoin.category.id,
               slug: categoryJoin.category.slug,
               name: categoryJoin.category.name,
             }
@@ -462,6 +409,7 @@ export const getBusinessesByCategory = cache(
 export const getBusinessesByCity = cache(
   async (
     siteId: string,
+    categoryList: CategoryData[],
     citySlug: string,
     page = 1,
     limit = 12
@@ -473,17 +421,7 @@ export const getBusinessesByCity = cache(
 
     const offset = (page - 1) * limit;
 
-    // Get site's category slugs first
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug)')
-      .eq('site_id', siteId);
-
-    const siteCategorySlugs = new Set(
-      (siteCategories || [])
-        .map((sc) => (sc.category as { slug: string } | null)?.slug)
-        .filter((s): s is string => s !== null)
-    );
+    const siteCategorySlugs = new Set(categoryList.map((c) => c.slug));
 
     // Get total count of businesses in this city
     const { count } = await supabase
@@ -515,7 +453,7 @@ export const getBusinessesByCity = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories(category:categories(slug, name))
+          business_categories(category:categories(id, slug, name))
         )
       `
       )
@@ -540,6 +478,7 @@ export const getBusinessesByCity = cache(
         );
         const category = matchingCategoryJoin?.category
           ? {
+              id: matchingCategoryJoin.category.id,
               slug: matchingCategoryJoin.category.slug,
               name: matchingCategoryJoin.category.name,
             }
@@ -618,7 +557,7 @@ export const getBusinessesByCategoryAndCity = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories!inner(category:categories!inner(slug, name))
+          business_categories!inner(category:categories!inner(id, slug, name))
         )
       `
       )
@@ -640,6 +579,7 @@ export const getBusinessesByCategoryAndCity = cache(
         const categoryJoin = business.business_categories?.[0];
         const category = categoryJoin?.category
           ? {
+              id: categoryJoin.category.id,
               slug: categoryJoin.category.slug,
               name: categoryJoin.category.name,
             }
@@ -674,6 +614,7 @@ export const getBusinessesByCategoryAndCity = cache(
 export const getFeaturedBusinesses = cache(
   async (
     siteId: string,
+    categoryList: CategoryData[],
     options?: { categorySlug?: string; citySlug?: string }
   ): Promise<BusinessCardData[]> => {
     const supabase = createServiceRoleClient(
@@ -683,22 +624,12 @@ export const getFeaturedBusinesses = cache(
 
     const { categorySlug, citySlug } = options ?? {};
 
-    // Get site's category slugs first
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug)')
-      .eq('site_id', siteId);
-
-    const siteCategorySlugs = new Set(
-      (siteCategories || [])
-        .map((sc) => (sc.category as { slug: string } | null)?.slug)
-        .filter((s): s is string => s !== null)
-    );
+    const siteCategorySlugs = new Set(categoryList.map((c) => c.slug));
 
     // Use !inner joins when filtering by category to ensure proper filtering
     const businessCategoriesJoin = categorySlug
-      ? 'business_categories!inner(category:categories!inner(slug, name))'
-      : 'business_categories(category:categories(slug, name))';
+      ? 'business_categories!inner(category:categories!inner(id, slug, name))'
+      : 'business_categories(category:categories(id, slug, name))';
 
     // Build query for businesses with a plan
     let query = supabase
@@ -753,6 +684,7 @@ export const getFeaturedBusinesses = cache(
         );
         const category = matchingCategoryJoin?.category
           ? {
+              id: matchingCategoryJoin.category.id,
               slug: matchingCategoryJoin.category.slug,
               name: matchingCategoryJoin.category.name,
             }
@@ -850,23 +782,12 @@ export async function getBusinessesInBounds(
 export const getBusinessDetails = cache(
   async (
     siteId: string,
+    categoryList: CategoryData[],
     businessId: string
   ): Promise<BusinessDetailData | null> => {
     const supabase = createServiceRoleClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SECRET_KEY!
-    );
-
-    // Get site's category slugs first
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug)')
-      .eq('site_id', siteId);
-
-    const siteCategorySlugs = new Set(
-      (siteCategories || [])
-        .map((sc) => (sc.category as { slug: string } | null)?.slug)
-        .filter((s): s is string => s !== null)
     );
 
     const { data } = await supabase
@@ -877,6 +798,7 @@ export const getBusinessDetails = cache(
         is_claimed,
         description,
         main_photo,
+        plan,
         business:businesses!inner(
           id,
           name,
@@ -892,7 +814,7 @@ export const getBusinessDetails = cache(
           latitude,
           longitude,
           business_review_sources(rating, provider, review_count, url),
-          business_categories(category:categories(slug, name))
+          business_categories(category:categories(id, slug, name))
         )
       `
       )
@@ -902,14 +824,20 @@ export const getBusinessDetails = cache(
 
     if (!data?.business) return null;
 
+    const siteCategorySlugs = new Set(categoryList.map((c) => c.slug));
+
     const business = data.business;
 
     // Filter to only categories that belong to this site
     const categories: CategoryData[] = (business.business_categories || [])
       .map((bc) => {
-        const cat = bc.category as { slug: string; name: string } | null;
+        const cat = bc.category as {
+          id: string;
+          slug: string;
+          name: string;
+        } | null;
         return cat && siteCategorySlugs.has(cat.slug)
-          ? { slug: cat.slug, name: cat.name }
+          ? { id: cat.id, slug: cat.slug, name: cat.name }
           : null;
       })
       .filter((c): c is CategoryData => c !== null);
@@ -925,6 +853,7 @@ export const getBusinessDetails = cache(
 
     return {
       id: business.id,
+      plan: data.plan,
       name: business.name,
       city: business.city,
       state: business.state,
@@ -935,7 +864,7 @@ export const getBusinessDetails = cache(
       phone: business.phone,
       website: business.website,
       main_photo_name: data.main_photo ?? business.main_photo_name,
-      hours: business.hours,
+      hours: business.hours as BusinessHours,
       latitude: business.latitude,
       longitude: business.longitude,
       is_claimed: data.is_claimed,
@@ -969,6 +898,7 @@ export const getBusinessReviews = cache(
 export const getRelatedBusinesses = cache(
   async (
     siteId: string,
+    categoryList: CategoryData[],
     businessId: string,
     categorySlug: string | null,
     cityName: string | null,
@@ -979,17 +909,7 @@ export const getRelatedBusinesses = cache(
       process.env.SUPABASE_SECRET_KEY!
     );
 
-    // Get site's category slugs first
-    const { data: siteCategories } = await supabase
-      .from('site_categories')
-      .select('category:categories(slug)')
-      .eq('site_id', siteId);
-
-    const siteCategorySlugs = new Set(
-      (siteCategories || [])
-        .map((sc) => (sc.category as { slug: string } | null)?.slug)
-        .filter((s): s is string => s !== null)
-    );
+    const siteCategorySlugs = new Set(categoryList.map((c) => c.slug));
 
     let query = supabase
       .from('site_businesses')
@@ -1006,7 +926,7 @@ export const getRelatedBusinesses = cache(
           website,
           formatted_address,
           business_review_sources(rating, provider, review_count),
-          business_categories(category:categories(slug, name))
+          business_categories(category:categories(id, slug, name))
         )
       `
       )
@@ -1041,6 +961,7 @@ export const getRelatedBusinesses = cache(
         );
         const category = matchingCategoryJoin?.category
           ? {
+              id: matchingCategoryJoin.category.id,
               slug: matchingCategoryJoin.category.slug,
               name: matchingCategoryJoin.category.name,
             }

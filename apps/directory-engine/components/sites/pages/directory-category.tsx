@@ -34,7 +34,7 @@ export function DirectoryCategoryPage({
   return (
     <div>
       {/* Header */}
-      <div className="bg-muted/30 py-16 px-4">
+      <div className="bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
@@ -127,7 +127,7 @@ async function CategoryBusinessListings({
   const totalToFetch = page * ITEMS_PER_PAGE;
   const [featuredBusinesses, { businesses, total, hasMore }] =
     await Promise.all([
-      getFeaturedBusinesses(siteId, { categorySlug }),
+      getFeaturedBusinesses(siteId, ctx.categoryList, { categorySlug }),
       getBusinessesByCategory(siteId, categorySlug, 1, totalToFetch),
     ]);
 
