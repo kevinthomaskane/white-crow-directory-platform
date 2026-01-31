@@ -13,7 +13,9 @@ import { BusinessReviewsSection } from '@/components/sites/sections/business-rev
 import { BusinessContactCard } from '@/components/sites/sections/business-contact-card';
 import { RelatedBusinessesSection } from '@/components/sites/sections/related-businesses-section';
 import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
-import { ClaimBadge } from '../claim-badge';
+import { ClaimBadge } from '@/components/sites/claim-badge';
+import { BusinessMediaGallery } from '@/components/sites/business-media-gallery';
+import { SingleBusinessMapWrapper } from '@/components/sites/single-business-map-wrapper';
 
 interface DirectoryBusinessPageProps {
   site: SiteConfig;
@@ -39,7 +41,11 @@ export async function DirectoryBusinessPage({
   const singleCity = ctx.cityList.length === 1;
 
   // Fetch business details (critical for page render)
-  const business = await getBusinessDetails(site.id, ctx.categoryList, businessId);
+  const business = await getBusinessDetails(
+    site.id,
+    ctx.categoryList,
+    businessId
+  );
 
   if (!business) return notFound();
 
@@ -164,20 +170,6 @@ export async function DirectoryBusinessPage({
                 </div>
               )}
             </div>
-
-            {/* Claim CTA - Header */}
-            {!business.is_claimed && (
-              <div className="flex-shrink-0">
-                <ClaimBusinessButton
-                  size="lg"
-                  siteBusinessId={business.site_business_id}
-                  businessName={business.name}
-                  businessWebsite={business.website}
-                >
-                  Claim This {businessTerm}
-                </ClaimBusinessButton>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -215,6 +207,7 @@ export async function DirectoryBusinessPage({
                       }
                       alt={business.name}
                       fill
+                      loading="eager"
                       sizes="(max-width: 768px) 100vw, 66vw"
                       className="object-cover"
                       priority
@@ -224,6 +217,15 @@ export async function DirectoryBusinessPage({
                   <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted mb-4 flex items-center justify-center">
                     <Building2 className="h-16 w-16 text-muted-foreground" />
                   </div>
+                )}
+
+                {/* Media Gallery */}
+                {business.media.length > 0 && (
+                  <BusinessMediaGallery
+                    media={business.media}
+                    businessName={business.name}
+                    className="mb-4"
+                  />
                 )}
 
                 {business.description ? (
@@ -250,17 +252,25 @@ export async function DirectoryBusinessPage({
               {business.latitude && business.longitude && (
                 <section className="rounded-lg border border-border bg-card p-6">
                   <h2 className="text-xl font-semibold mb-4">Location</h2>
-                  <div className="aspect-video w-full rounded-lg bg-muted flex items-center justify-center">
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-2"
-                    >
-                      <MapPin className="h-5 w-5" />
-                      View on Google Maps
-                    </a>
-                  </div>
+                  {process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ? (
+                    <SingleBusinessMapWrapper
+                      latitude={business.latitude}
+                      longitude={business.longitude}
+                      mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
+                    />
+                  ) : (
+                    <div className="aspect-video w-full rounded-lg bg-muted flex items-center justify-center">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline flex items-center gap-2"
+                      >
+                        <MapPin className="h-5 w-5" />
+                        View on Google Maps
+                      </a>
+                    </div>
+                  )}
                   {business.formatted_address && (
                     <p className="mt-4 text-muted-foreground">
                       {business.formatted_address}
@@ -274,6 +284,7 @@ export async function DirectoryBusinessPage({
             <div className="space-y-6">
               <div className="lg:sticky lg:top-20">
                 <BusinessContactCard
+                  plan={business.plan}
                   phone={business.phone}
                   website={business.website}
                   formattedAddress={business.formatted_address}

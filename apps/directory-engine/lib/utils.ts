@@ -161,6 +161,7 @@ export function getBusinessImageUrl(
   params.set('width', width.toString());
   if (height) params.set('height', height.toString());
   params.set('quality', quality.toString());
+  params.set('resize', 'contain');
 
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/render/image/public/${photoName}?${params.toString()}`;
 }
@@ -203,4 +204,18 @@ export function getVideoThumbnailUrl(embedUrl: string): string | null {
 
   // Vimeo - use vumbnail.com as a simple thumbnail service
   return `https://vumbnail.com/${parsed.videoId}.jpg`;
+}
+
+/**
+ * Converts a YouTube or Vimeo URL to an embeddable iframe URL.
+ */
+export function getVideoEmbedUrl(url: string): string | null {
+  const parsed = parseVideoUrl(url);
+  if (!parsed) return null;
+
+  if (parsed.provider === 'youtube') {
+    return `https://www.youtube.com/embed/${parsed.videoId}`;
+  }
+
+  return `https://player.vimeo.com/video/${parsed.videoId}`;
 }

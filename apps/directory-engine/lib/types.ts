@@ -160,6 +160,13 @@ export type MapBusinessData = Pick<
 
 // Business detail types
 type BusinessReview = Database['public']['Tables']['business_reviews']['Row'];
+type SiteBusinessMedia =
+  Database['public']['Tables']['site_business_media']['Row'];
+
+export type MediaItem = Pick<
+  SiteBusinessMedia,
+  'alt_text' | 'file_path' | 'embed_url' | 'type' | 'sort_order'
+>;
 
 export type BusinessDetailData = Pick<
   Business,
@@ -184,6 +191,8 @@ export type BusinessDetailData = Pick<
       BusinessReviewSource,
       'rating' | 'provider' | 'review_count' | 'url'
     >[];
+  } & {
+    media: MediaItem[];
   };
 
 export type BusinessReviewData = Pick<

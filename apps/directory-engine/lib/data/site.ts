@@ -799,6 +799,7 @@ export const getBusinessDetails = cache(
         description,
         main_photo,
         plan,
+        media:site_business_media(file_path, type, embed_url, sort_order, alt_text),
         business:businesses!inner(
           id,
           name,
@@ -852,6 +853,7 @@ export const getBusinessDetails = cache(
     );
 
     return {
+      media: data.media,
       id: business.id,
       plan: data.plan,
       name: business.name,

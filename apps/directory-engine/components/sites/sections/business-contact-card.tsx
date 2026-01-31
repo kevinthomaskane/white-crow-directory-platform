@@ -17,7 +17,7 @@ import type { BusinessDetailData } from '@/lib/types';
 
 type BusinessContactCardProps = Pick<
   BusinessDetailData,
-  'phone' | 'website' | 'latitude' | 'longitude' | 'hours'
+  'phone' | 'website' | 'latitude' | 'longitude' | 'hours' | 'plan'
 > & {
   className?: string;
   formattedAddress: BusinessDetailData['formatted_address'];
@@ -34,6 +34,7 @@ const DAY_ORDER = [
 ];
 
 export function BusinessContactCard({
+  plan,
   phone,
   website,
   formattedAddress,
@@ -71,7 +72,11 @@ export function BusinessContactCard({
 
         {website && (
           <Button variant="outline" className="w-full justify-start" asChild>
-            <a href={website} target="_blank" rel="noopener noreferrer">
+            <a
+              href={website}
+              target="_blank"
+              rel={cn(!plan && 'nofollow', 'noopener')}
+            >
               <Globe className="h-4 w-4" />
               <span className="truncate">{formatWebsiteDisplay(website)}</span>
               <ExternalLink className="h-3 w-3 ml-auto" />
@@ -116,7 +121,7 @@ export function BusinessContactCard({
             <a
               href={website}
               target="_blank"
-              rel="noopener noreferrer"
+              rel={cn(!plan && 'nofollow', 'noopener')}
               className="text-primary hover:underline truncate"
             >
               {formatWebsiteDisplay(website)}
