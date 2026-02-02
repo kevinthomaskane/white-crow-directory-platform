@@ -151,6 +151,7 @@ export const getTopBusinesses = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses(
           id,
           name,
@@ -195,7 +196,7 @@ export const getTopBusinesses = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,
@@ -344,6 +345,7 @@ export const getBusinessesByCategory = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses!inner(
           id,
           name,
@@ -384,7 +386,7 @@ export const getBusinessesByCategory = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,
@@ -444,6 +446,7 @@ export const getBusinessesByCity = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses!inner(
           id,
           name,
@@ -488,7 +491,7 @@ export const getBusinessesByCity = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,
@@ -548,6 +551,7 @@ export const getBusinessesByCategoryAndCity = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses!inner(
           id,
           name,
@@ -589,7 +593,7 @@ export const getBusinessesByCategoryAndCity = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,
@@ -638,6 +642,7 @@ export const getFeaturedBusinesses = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses!inner(
           id,
           name,
@@ -694,7 +699,7 @@ export const getFeaturedBusinesses = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,
@@ -919,6 +924,7 @@ export const getRelatedBusinesses = cache(
         `
         is_claimed,
         plan,
+        main_photo,
         business:businesses!inner(
           id,
           name,
@@ -973,7 +979,7 @@ export const getRelatedBusinesses = cache(
           id: business.id,
           name: business.name,
           city: business.city,
-          main_photo_name: business.main_photo_name,
+          main_photo_name: sb.main_photo ?? business.main_photo_name,
           phone: business.phone,
           website: business.website,
           formatted_address: business.formatted_address,

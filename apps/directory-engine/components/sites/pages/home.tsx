@@ -1,7 +1,8 @@
 import type { SiteConfig, RouteContext } from '@/lib/types';
 import { Hero } from '@/components/sites/hero';
 import { HowItWorksSection } from '@/components/sites/sections/how-it-works-section';
-import { BenefitsSection } from '@/components/sites/sections/benefits-section';
+import { BusinessOwnersSection } from '@/components/sites/sections/business-owners-section';
+import { PremiumBenefitsSection } from '@/components/sites/sections/premium-benefits-section';
 
 interface HomePageProps {
   site: SiteConfig;
@@ -20,7 +21,9 @@ export function HomePage({ site, ctx, stats }: HomePageProps) {
 
       <HowItWorksSection site={site} ctx={ctx} />
 
-      <BenefitsSection site={site} ctx={ctx} />
+      <BusinessOwnersSection site={site} />
+
+      <PremiumBenefitsSection />
     </>
   );
 }

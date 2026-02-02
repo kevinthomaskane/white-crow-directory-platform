@@ -1,4 +1,12 @@
 export function BadgeEmblem({ directoryName }: { directoryName: string }) {
+  // Calculate ribbon width based on text length
+  // ~7px per character for 11px Arial bold with 0.5 letter-spacing, plus padding
+  const charWidth = 7;
+  const padding = 20;
+  const minWidth = 60;
+  const ribbonWidth = Math.max(minWidth, directoryName.length * charWidth + padding);
+  const ribbonX = 100 - ribbonWidth / 2;
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -23,7 +31,7 @@ export function BadgeEmblem({ directoryName }: { directoryName: string }) {
           />
         </linearGradient>
         <filter id="shadow">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3" />
+          <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
         </filter>
       </defs>
 
@@ -31,7 +39,7 @@ export function BadgeEmblem({ directoryName }: { directoryName: string }) {
         d="M100 10 L170 35 L170 100 Q170 160 100 210 Q30 160 30 100 L30 35 Z"
         fill="url(#shieldGradient)"
         stroke="#0a1f3d"
-        stroke-width="2"
+        strokeWidth="2"
         filter="url(#shadow)"
       />
 
@@ -39,7 +47,7 @@ export function BadgeEmblem({ directoryName }: { directoryName: string }) {
         d="M100 25 L155 45 L155 100 Q155 150 100 190 Q45 150 45 100 L45 45 Z"
         fill="none"
         stroke="#2a6bb5"
-        stroke-width="1.5"
+        strokeWidth="1.5"
         opacity="0.4"
       />
 
@@ -50,34 +58,34 @@ export function BadgeEmblem({ directoryName }: { directoryName: string }) {
         r="32"
         fill="none"
         stroke="url(#ribbonGradient)"
-        stroke-width="3"
+        strokeWidth="3"
       />
 
       <path
         d="M85 90 L95 100 L115 78"
         fill="none"
         stroke="url(#ribbonGradient)"
-        stroke-width="5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
       <path
         d="M50 50 L150 50 L145 65 L55 65 Z"
         fill="url(#ribbonGradient)"
         stroke="#a08020"
-        stroke-width="1"
+        strokeWidth="1"
       />
 
       <text
         x="100"
-        y="60"
-        font-family="Arial, sans-serif"
-        font-size="12"
-        font-weight="bold"
+        y="62"
+        fontFamily="Arial, sans-serif"
+        fontSize="12"
+        fontWeight="bold"
         fill="#0d2847"
-        text-anchor="middle"
-        letter-spacing="1"
+        textAnchor="middle"
+        letterSpacing="1"
       >
         PREMIUM
       </text>
@@ -85,38 +93,38 @@ export function BadgeEmblem({ directoryName }: { directoryName: string }) {
       <text
         x="100"
         y="145"
-        font-family="Arial, sans-serif"
-        font-size="16"
-        font-weight="bold"
+        fontFamily="Arial, sans-serif"
+        fontSize="16"
+        fontWeight="bold"
         fill="#ffffff"
-        text-anchor="middle"
-        letter-spacing="2"
+        textAnchor="middle"
+        letterSpacing="2"
       >
         MEMBER
       </text>
 
       {/* Bottom ribbon for directory name */}
       <rect
-        x="35"
+        x={ribbonX}
         y="165"
-        width="130"
+        width={ribbonWidth}
         height="28"
         rx="3"
         fill="url(#ribbonGradient)"
         stroke="#a08020"
-        stroke-width="1"
+        strokeWidth="1"
       />
 
       {/* Directory name text - EDITABLE */}
       <text
         x="100"
         y="183"
-        font-family="Arial, sans-serif"
-        font-size="11"
-        font-weight="bold"
+        fontFamily="Arial, sans-serif"
+        fontSize="11"
+        fontWeight="bold"
         fill="#0d2847"
-        text-anchor="middle"
-        letter-spacing="0.5"
+        textAnchor="middle"
+        letterSpacing="0.5"
       >
         {directoryName}
       </text>

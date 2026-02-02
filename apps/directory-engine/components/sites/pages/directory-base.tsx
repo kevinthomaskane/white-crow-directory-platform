@@ -61,7 +61,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
       {/* Browse Sections */}
       {hasMultipleCategories && (
         <CategoriesSection
-          className="bg-muted/30 pb-0 scroll-mt-16"
+          className="bg-muted/90 pb-0 scroll-mt-16"
           categories={ctx.categoryList}
           basePath={basePath}
           title={`Browse by ${categoryTerm}`}
@@ -73,7 +73,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
 
       {hasMultipleCities && (
         <PopularCitiesSection
-          className="bg-muted/30 scroll-mt-16"
+          className="bg-muted/90 scroll-mt-16"
           cities={ctx.cityList}
           basePath={basePath}
           title="Browse by Location"

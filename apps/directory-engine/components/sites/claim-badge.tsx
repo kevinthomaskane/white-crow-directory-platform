@@ -9,10 +9,10 @@ export function ClaimBadge({
 }) {
   if (hasPlan) {
     return (
-      <div className="flex-shrink-0 rounded-full bg-amber-400 p-1 dark:bg-white">
+      <div className="flex-shrink-0 rounded-full bg-premium p-1">
         <Check
           strokeWidth={4}
-          className="h-3.5 w-3.5 text-white dark:text-amber-400"
+          className="h-3.5 w-3.5 text-premium-foreground"
         />
       </div>
     );
@@ -20,18 +20,18 @@ export function ClaimBadge({
 
   if (isClaimed) {
     return (
-      <div className="flex-shrink-0 rounded-full bg-green-400 p-1 dark:bg-white">
+      <div className="flex-shrink-0 rounded-full bg-claimed p-1">
         <Check
           strokeWidth={4}
-          className="h-3.5 w-3.5 text-white dark:text-green-400"
+          className="h-3.5 w-3.5 text-claimed-foreground"
         />
       </div>
     );
   }
 
   return (
-    <div className="flex-shrink-0 rounded-full bg-gray-300 p-1">
-      <Check strokeWidth={4} className="h-3.5 w-3.5 text-white" />
+    <div className="flex-shrink-0 rounded-full bg-unclaimed p-1">
+      <Check strokeWidth={4} className="h-3.5 w-3.5 text-unclaimed-foreground" />
     </div>
   );
 }
