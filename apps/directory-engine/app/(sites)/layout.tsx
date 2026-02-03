@@ -1,17 +1,64 @@
+import type { Metadata } from 'next';
 import { SiteHeader, type NavItem } from '@/components/sites/site-header';
 import { SiteFooter } from '@/components/sites/site-footer';
 import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 import { AuthProvider } from '@/contexts/auth-context';
 import { organizationSchema, websiteSchema } from '@/lib/schemas';
+import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const siteConfig = await getSiteConfig();
+
+  if (!siteConfig) {
+    return {};
+  }
+
+  const siteUrl = `https://${siteConfig.domain}`;
+  const termBusinesses =
+    siteConfig.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
+  const description = `Find the best ${termBusinesses} in your area. Browse our directory of trusted ${termBusinesses} with reviews and ratings.`;
+  const faviconUrl = siteConfig.favicon_path
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${siteConfig.favicon_path}`
+    : null;
+
+  return {
+    title: {
+      default: siteConfig.name,
+      template: `%s | ${siteConfig.name}`,
+    },
+    ...(faviconUrl && {
+      icons: {
+        icon: faviconUrl,
+      },
+    }),
+    description,
+    metadataBase: new URL(siteUrl),
+    openGraph: {
+      type: 'website',
+      siteName: siteConfig.name,
+      title: siteConfig.name,
+      description,
+      url: siteUrl,
+      ...(siteConfig.logo_path && {
+        images: [{ url: siteConfig.logo_path }],
+      }),
+    },
+    twitter: {
+      card: 'summary',
+      title: siteConfig.name,
+      description,
+    },
+  };
+}
 
 interface NavContext {
   basePath: string;
   terminology: {
     term_cta: string | null;
-    term_categories: string | null;
     term_business: string | null;
+    term_category: string | null;
   };
   hasMultipleCategories: boolean;
   hasMultipleCities: boolean;
@@ -19,7 +66,7 @@ interface NavContext {
 
 function buildNavItems(ctx: NavContext): NavItem[] {
   const ctaLabel = ctx.terminology.term_cta || 'Browse Directory';
-  const categoriesLabel = ctx.terminology.term_categories || 'Categories';
+  const categoryLabel = ctx.terminology.term_category || 'Categories';
 
   const subItems: { label: string; href: string }[] = [];
 
@@ -32,7 +79,7 @@ function buildNavItems(ctx: NavContext): NavItem[] {
 
   if (ctx.hasMultipleCategories) {
     subItems.push({
-      label: `By ${categoriesLabel}`,
+      label: `By ${categoryLabel}`,
       href: `/${ctx.basePath}#by-category`,
     });
   }
@@ -67,6 +114,10 @@ export default async function SitesLayout({
 }) {
   const siteConfig = await getSiteConfig();
 
+  if (!siteConfig) {
+    notFound();
+  }
+
   let navItems: NavItem[] = [];
   let routeContext = null;
   let basePath = '';
@@ -79,7 +130,7 @@ export default async function SitesLayout({
       basePath,
       terminology: {
         term_cta: siteConfig.vertical?.term_cta ?? null,
-        term_categories: siteConfig.vertical?.term_categories ?? null,
+        term_category: siteConfig.vertical?.term_category ?? null,
         term_business: siteConfig.vertical?.term_business ?? null,
       },
       hasMultipleCategories: routeContext.categoryList.length > 1,
@@ -128,7 +179,10 @@ export default async function SitesLayout({
       )}
       <div className="min-h-screen bg-background">
         <SiteHeader
-          logo={{ text: siteConfig?.name || 'Directory Site' }}
+          logo={{
+            src: siteConfig.logo_path || undefined,
+            alt: siteConfig.name || 'Logo',
+          }}
           navItems={navItems}
         />
         <main>{children}</main>

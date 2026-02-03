@@ -82,7 +82,7 @@ export function DirectoryBasePage({ site, ctx }: DirectoryBasePageProps) {
           className="bg-muted/90 pb-0 scroll-mt-16"
           categories={ctx.categoryList}
           basePath={basePath}
-          title={`Browse by ${categoryTermLower}`}
+          title={`Browse by ${categoryTerm}`}
           description={`Find ${businessesTermLower} by specialty`}
           limit={999}
           showViewAll={false}

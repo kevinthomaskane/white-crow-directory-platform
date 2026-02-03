@@ -328,17 +328,14 @@ export function SiteHeader({
         className
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-18 max-w-6xl items-center justify-between px-4">
         {/* Logo */}
-        <Link
-          href={logo.href || '/'}
-          className="flex items-center gap-2 transition-opacity hover:opacity-80"
-        >
+        <Link className="h-full inline-block py-4" href={logo.href || '/'}>
           {logo.src && (
             <img
-              src={logo.src}
+              src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logo.src}`}
               alt={logo.alt || 'Logo'}
-              className="h-8 w-auto"
+              className="h-full w-auto"
             />
           )}
           {logo.text && (

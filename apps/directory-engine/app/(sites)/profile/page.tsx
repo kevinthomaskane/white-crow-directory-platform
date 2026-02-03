@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server';
 import { UpdateEmailForm } from '@/components/sites/profile/update-email-form';
 import { Button } from '@/components/ui/button';
 import { getSiteConfig } from '@/lib/data/site';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  robots: 'noindex,nofollow',
+};
 
 export default async function ProfilePage() {
   const supabase = await createClient();
