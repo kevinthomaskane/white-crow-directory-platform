@@ -9,14 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  ArrowLeft,
-  Globe,
-  MapPin,
-  Layers,
-  Building2,
-  FileText,
-} from 'lucide-react';
+import { ArrowLeft, Globe, MapPin, Layers, Building2 } from 'lucide-react';
 import { SyncSearchButton } from '@/components/admin/sync-search-button';
 import { SubmissionActions } from '@/components/admin/submission-actions';
 import { RefreshBusinessesButton } from '@/components/admin/refresh-businesses-button';

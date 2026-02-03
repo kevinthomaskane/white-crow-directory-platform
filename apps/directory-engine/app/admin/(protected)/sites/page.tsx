@@ -20,6 +20,7 @@ export default async function SitesPage() {
       `
       id,
       name,
+      domain,
       created_at,
       verticals (name),
       states (name, code)
@@ -74,8 +75,7 @@ export default async function SitesPage() {
                   <div className="min-w-0">
                     <div className="font-medium">{site.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {site.verticals?.name} &middot; {site.states?.name} (
-                      {site.states?.code})
+                      {site.domain}
                     </div>
                   </div>
                   <Button variant="outline" size="sm" asChild>

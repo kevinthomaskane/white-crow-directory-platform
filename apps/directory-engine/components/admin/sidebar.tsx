@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import type { User } from '@supabase/supabase-js';
 import { ADMIN_SITE_NAV } from '@/lib/constants';
 import {
-  LayoutDashboard,
   Layers,
   FolderTree,
   Building2,
@@ -18,7 +17,6 @@ import {
 import { cn } from '@/lib/utils';
 
 const navIcons: Record<string, React.ReactNode> = {
-  '/admin': <LayoutDashboard className="h-4 w-4" />,
   '/admin/verticals': <Layers className="h-4 w-4" />,
   '/admin/categories': <FolderTree className="h-4 w-4" />,
   '/admin/add-businesses': <Building2 className="h-4 w-4" />,
@@ -37,11 +35,6 @@ export function Sidebar({ user }: { user: User }) {
     router.refresh();
   }
 
-  const allNavItems = [
-    { title: 'Dashboard', href: '/admin' },
-    ...ADMIN_SITE_NAV,
-  ];
-
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
@@ -56,7 +49,7 @@ export function Sidebar({ user }: { user: User }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
-        {allNavItems.map((item) => {
+        {ADMIN_SITE_NAV.map((item) => {
           const isActive = pathname === item.href;
           return (
             <a
