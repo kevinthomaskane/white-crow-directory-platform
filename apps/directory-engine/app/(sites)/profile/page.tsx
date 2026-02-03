@@ -1,8 +1,9 @@
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { UpdateEmailForm } from '@/components/sites/profile/update-email-form';
 import { Button } from '@/components/ui/button';
+import { getSiteConfig } from '@/lib/data/site';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -15,6 +16,11 @@ export default async function ProfilePage() {
     redirect('/login');
   }
 
+  const site = await getSiteConfig();
+
+  if (!site) {
+    return notFound();
+  }
   // Fetch user's claimed businesses
   const { data: claimedBusinesses } = await supabase
     .from('site_businesses')
@@ -23,6 +29,7 @@ export default async function ProfilePage() {
       id,
       claimed_at,
       plan,
+      site_id,
       business:businesses!inner(
         id,
         name
@@ -30,6 +37,7 @@ export default async function ProfilePage() {
     `
     )
     .eq('claimed_by', user.id)
+    .eq('site_id', site.id)
     .eq('is_claimed', true);
 
   const displayName =
@@ -75,22 +83,20 @@ export default async function ProfilePage() {
                   className="flex items-center justify-between rounded-lg border bg-card p-4"
                 >
                   <div>
-                    <h3 className="font-medium">{item.business.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{item.business.name}</h3>
+                      {item.plan && (
+                        <span className="text-xs font-medium text-premium-foreground bg-premium px-2 py-0.5 rounded-full">
+                          Premium
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       Claimed on{' '}
                       {new Date(item.claimed_at!).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {item.plan && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link
-                          href={`/profile/listings/${item.id}/subscription`}
-                        >
-                          Manage Subscription
-                        </Link>
-                      </Button>
-                    )}
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/profile/listings/${item.id}`}>
                         Manage Listing

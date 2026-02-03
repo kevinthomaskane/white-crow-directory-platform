@@ -7,6 +7,12 @@ import { SearchForm } from '@/components/sites/search-form';
 import { BusinessListings } from '@/components/sites/business-listings';
 import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
+import {
+  getBreadcrumbListSchema,
+  getCollectionPageSchema,
+  getItemListSchema,
+} from '@/lib/schemas';
+import { buildDirectoryUrl } from '@/lib/utils';
 
 interface DirectoryCityPageProps {
   site: SiteConfig;
@@ -24,30 +30,69 @@ export function DirectoryCityPage({
   page = 1,
 }: DirectoryCityPageProps) {
   const basePath = site.vertical?.slug ?? '';
-  const businessTerm =
-    site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
-  const businessTermSingular = site.vertical?.term_business ?? 'Business';
+  const businessesTerm = site.vertical?.term_businesses ?? 'Businesses';
+  const businessesTermLower = businessesTerm.toLowerCase();
+  const categoryTerm = site.vertical?.term_category ?? 'Category';
+  const categoryTermLower = categoryTerm.toLowerCase();
+
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
+
+  const pagePath = buildDirectoryUrl({
+    basePath,
+    citySlug: city.slug,
+    singleCity,
+    singleCategory,
+  });
+  const pageUrl = `https://${site.domain}${pagePath}`;
+  const pageTitle = `${businessesTerm ?? 'Directory'} in ${city.name}, ${site.state?.code ?? ''}`;
+  const pageDescription = `Browse ${businessesTermLower} in ${city.name}.`;
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getCollectionPageSchema(pageTitle, pageDescription, pageUrl)
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getBreadcrumbListSchema([
+              {
+                name: businessesTerm ?? 'Directory',
+                url: `https://${site.domain}/${basePath}`,
+              },
+              {
+                name: city.name,
+                url: pageUrl,
+              },
+            ])
+          ),
+        }}
+      />
       {/* Header */}
       <div className="bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link href={`/${basePath}`} className="hover:text-foreground">
-              {site.vertical?.term_businesses ?? 'Directory'}
+              {businessesTerm ?? 'Directory'}
             </Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-foreground">{city.name}</span>
           </nav>
 
           <h1 className="text-3xl font-bold tracking-tight mb-2">
-            {site.vertical?.term_businesses ?? 'Directory'} in {city.name},{' '}
+            {businessesTerm ?? 'Directory'} in {city.name},{' '}
             {site.state?.code ?? ''}
           </h1>
           <p className="text-muted-foreground mb-6">
-            Browse {businessTerm} in {city.name}.
+            Browse {businessesTermLower} in {city.name}.
           </p>
 
           {/* Search Form */}
@@ -68,9 +113,9 @@ export function DirectoryCityPage({
           </h2>
 
           {/* Category Filter Chips */}
-          {ctx.categoryList.length > 0 && (
+          {ctx.categoryList.length > 1 && (
             <FilterChips
-              label={`Refine by ${site.vertical?.term_category?.toLowerCase() ?? 'category'}:`}
+              label={`Refine by ${categoryTermLower ?? 'category'}:`}
               chips={ctx.categoryList
                 .slice()
                 .sort((a, b) => a.name.localeCompare(b.name))
@@ -87,12 +132,14 @@ export function DirectoryCityPage({
           <Suspense fallback={<BusinessListingsSkeleton />}>
             <CityBusinessListings
               siteId={site.id}
+              domain={site.domain}
               basePath={basePath}
               ctx={ctx}
               citySlug={city.slug}
+              businessesTerm={businessesTerm}
               page={page}
-              loadMoreLabel={`Load More ${businessTermSingular}s`}
-              emptyMessage={`No ${businessTerm} found in ${city.name}.`}
+              loadMoreLabel={`Load More ${businessesTerm}`}
+              emptyMessage={`No ${businessesTermLower} found in ${city.name}.`}
             />
           </Suspense>
         </div>
@@ -103,7 +150,9 @@ export function DirectoryCityPage({
 
 interface CityBusinessListingsProps {
   siteId: string;
+  domain: string;
   basePath: string;
+  businessesTerm: string;
   ctx: RouteContext;
   citySlug: string;
   page: number;
@@ -113,13 +162,18 @@ interface CityBusinessListingsProps {
 
 async function CityBusinessListings({
   siteId,
+  domain,
   basePath,
   ctx,
+  businessesTerm,
   citySlug,
   page,
   loadMoreLabel,
   emptyMessage,
 }: CityBusinessListingsProps) {
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
+
   const totalToFetch = page * ITEMS_PER_PAGE;
   const [featuredBusinesses, { businesses, total, hasMore }] =
     await Promise.all([
@@ -127,19 +181,54 @@ async function CityBusinessListings({
       getBusinessesByCity(siteId, ctx.categoryList, citySlug, 1, totalToFetch),
     ]);
 
+  // Build ItemList schema for businesses
+  const itemListItems = [...featuredBusinesses, ...businesses].map(
+    (business) => {
+      const businessUrl = buildDirectoryUrl({
+        basePath,
+        categorySlug: business.category?.slug,
+        citySlug,
+        businessId: business.id,
+        singleCity,
+        singleCategory,
+      });
+
+      return {
+        '@type': 'ListItem',
+        name: business.name,
+        url: `https://${domain}${businessUrl}`,
+      };
+    }
+  );
+
+  const cityName = ctx.cityList.find((c) => c.slug === citySlug)?.name ?? '';
+  const itemListSchema = getItemListSchema(
+    `${businessesTerm} in ${cityName}`,
+    `Browse ${businessesTerm.toLowerCase()} in ${cityName}`,
+    itemListItems
+  );
+
   return (
-    <BusinessListings
-      featuredBusinesses={featuredBusinesses}
-      initialBusinesses={businesses}
-      initialTotal={total}
-      initialHasMore={hasMore}
-      initialPage={page}
-      basePath={basePath}
-      ctx={ctx}
-      citySlug={citySlug}
-      loadMoreLabel={loadMoreLabel}
-      emptyMessage={emptyMessage}
-      itemsPerPage={ITEMS_PER_PAGE}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(itemListSchema),
+        }}
+      />
+      <BusinessListings
+        featuredBusinesses={featuredBusinesses}
+        initialBusinesses={businesses}
+        initialTotal={total}
+        initialHasMore={hasMore}
+        initialPage={page}
+        basePath={basePath}
+        ctx={ctx}
+        citySlug={citySlug}
+        loadMoreLabel={loadMoreLabel}
+        emptyMessage={emptyMessage}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
+    </>
   );
 }

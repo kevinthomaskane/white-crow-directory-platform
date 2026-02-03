@@ -32,6 +32,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
     .select(
       `
       id,
+      domain,
       name,
       vertical_id,
       state_id,
@@ -48,6 +49,7 @@ export const getSiteConfig = cache(async (): Promise<SiteConfig | null> => {
   if (!site) return null;
 
   const siteConfig: SiteConfig = {
+    domain: site.domain,
     id: site.id,
     name: site.name,
     vertical_id: site.vertical_id,

@@ -21,6 +21,7 @@ export type SiteTerminology = Pick<
 export type SiteConfig = Pick<
   Site,
   | 'id'
+  | 'domain'
   | 'name'
   | 'vertical_id'
   | 'state_id'

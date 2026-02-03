@@ -4,22 +4,22 @@ import { createServiceRoleClient } from '@white-crow/shared';
 import { createClient } from '@/lib/supabase/server';
 import type { ActionsResponse } from '@/lib/types';
 
-interface UpdateBusinessProFieldsPayload {
+interface UpdateBusinessPremiumFieldsPayload {
   siteBusinessId: string;
   description: string | null;
   hasNewImage?: boolean;
   siteDomain?: string;
 }
 
-interface UpdateBusinessProFieldsResult {
+interface UpdateBusinessPremiumFieldsResult {
   updated: true;
   imageUploadUrl?: string;
   imagePath?: string;
 }
 
-export async function updateBusinessProFields(
-  payload: UpdateBusinessProFieldsPayload
-): Promise<ActionsResponse<UpdateBusinessProFieldsResult>> {
+export async function updateBusinessPremiumFields(
+  payload: UpdateBusinessPremiumFieldsPayload
+): Promise<ActionsResponse<UpdateBusinessPremiumFieldsResult>> {
   const { siteBusinessId, description, hasNewImage, siteDomain } = payload;
 
   if (!siteBusinessId) {
@@ -41,7 +41,7 @@ export async function updateBusinessProFields(
     };
   }
 
-  // Fetch site_business and verify ownership + pro status
+  // Fetch site_business and verify ownership + premium status
   const { data: siteBusiness, error: fetchError } = await supabase
     .from('site_businesses')
     .select('id, claimed_by, plan')
@@ -59,9 +59,9 @@ export async function updateBusinessProFields(
     };
   }
 
-  const isPro = Boolean(siteBusiness.plan);
+  const isPremium = Boolean(siteBusiness.plan);
 
-  if (!isPro) {
+  if (!isPremium) {
     return {
       ok: false,
       error: 'A Pro subscription is required to access these features.',

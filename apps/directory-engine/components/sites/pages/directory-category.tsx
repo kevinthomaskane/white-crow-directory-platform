@@ -10,6 +10,12 @@ import { SearchForm } from '@/components/sites/search-form';
 import { BusinessListings } from '@/components/sites/business-listings';
 import { BusinessListingsSkeleton } from '@/components/sites/business-listings-skeleton';
 import { FilterChips, type FilterChip } from '@/components/sites/filter-chips';
+import {
+  getBreadcrumbListSchema,
+  getCollectionPageSchema,
+  getItemListSchema,
+} from '@/lib/schemas';
+import { buildDirectoryUrl, slugify } from '@/lib/utils';
 
 interface DirectoryCategoryPageProps {
   site: SiteConfig;
@@ -27,19 +33,57 @@ export function DirectoryCategoryPage({
   page = 1,
 }: DirectoryCategoryPageProps) {
   const basePath = site.vertical?.slug ?? '';
-  const businessTermSingular = site.vertical?.term_business ?? 'Business';
+  const businessesTerm = site.vertical?.term_businesses ?? 'Businesses';
+  const businessesTermLower = businessesTerm.toLowerCase();
 
   const hasMultipleCities = ctx.cityList.length > 1;
+  const singleCity = !hasMultipleCities;
+  const singleCategory = ctx.categoryList.length === 1;
+
+  const pagePath = buildDirectoryUrl({
+    basePath,
+    categorySlug: category.slug,
+    singleCity,
+    singleCategory,
+  });
+  const pageUrl = `https://${site.domain}${pagePath}`;
+  const pageTitle = category.name;
+  const pageDescription = `Browse results for ${category.name.toLowerCase()} ${businessesTermLower}${hasMultipleCities ? ' across all locations' : ''}.`;
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getCollectionPageSchema(pageTitle, pageDescription, pageUrl)
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getBreadcrumbListSchema([
+              {
+                name: businessesTerm ?? 'Directory',
+                url: `https://${site.domain}/${basePath}`,
+              },
+              {
+                name: category.name,
+                url: pageUrl,
+              },
+            ])
+          ),
+        }}
+      />
       {/* Header */}
       <div className="bg-muted/30 py-16">
         <div className="mx-auto max-w-6xl px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Link href={`/${basePath}`} className="hover:text-foreground">
-              {site.vertical?.term_businesses ?? 'Directory'}
+              {businessesTerm ?? 'Directory'}
             </Link>
             <ChevronRight className="h-4 w-4" />
             <span className="text-foreground">{category.name}</span>
@@ -90,11 +134,14 @@ export function DirectoryCategoryPage({
           <Suspense fallback={<BusinessListingsSkeleton />}>
             <CategoryBusinessListings
               siteId={site.id}
+              domain={site.domain}
               basePath={basePath}
               ctx={ctx}
               categorySlug={category.slug}
               page={page}
-              loadMoreLabel={`Load More ${businessTermSingular}s`}
+              loadMoreLabel={`Load More ${businessesTerm}`}
+              businessesTerm={businessesTerm}
+              businessesTermLower={businessesTermLower}
             />
           </Suspense>
         </div>
@@ -105,24 +152,29 @@ export function DirectoryCategoryPage({
 
 interface CategoryBusinessListingsProps {
   siteId: string;
+  domain: string;
   basePath: string;
   ctx: RouteContext;
   categorySlug: string;
   page: number;
   loadMoreLabel: string;
+  businessesTerm: string;
+  businessesTermLower: string;
 }
 
 async function CategoryBusinessListings({
   siteId,
+  domain,
   basePath,
   ctx,
   categorySlug,
   page,
   loadMoreLabel,
+  businessesTerm,
+  businessesTermLower,
 }: CategoryBusinessListingsProps) {
-  const businessTerm =
-    ctx.categoryList.find((c) => c.slug === categorySlug)?.name.toLowerCase() ??
-    'businesses';
+  const singleCity = ctx.cityList.length === 1;
+  const singleCategory = ctx.categoryList.length === 1;
 
   const totalToFetch = page * ITEMS_PER_PAGE;
   const [featuredBusinesses, { businesses, total, hasMore }] =
@@ -131,19 +183,54 @@ async function CategoryBusinessListings({
       getBusinessesByCategory(siteId, categorySlug, 1, totalToFetch),
     ]);
 
+  // Build ItemList schema for businesses
+  const itemListItems = [...featuredBusinesses, ...businesses].map(
+    (business) => {
+      const citySlug = business.city ? slugify(business.city) : null;
+      const businessUrl = buildDirectoryUrl({
+        basePath,
+        categorySlug: business.category?.slug,
+        citySlug,
+        businessId: business.id,
+        singleCity,
+        singleCategory,
+      });
+
+      return {
+        '@type': 'ListItem',
+        name: business.name,
+        url: `https://${domain}${businessUrl}`,
+      };
+    }
+  );
+
+  const itemListSchema = getItemListSchema(
+    `${businessesTerm} listings`,
+    `Browse ${businessesTermLower} in this category`,
+    itemListItems
+  );
+
   return (
-    <BusinessListings
-      featuredBusinesses={featuredBusinesses}
-      initialBusinesses={businesses}
-      initialTotal={total}
-      initialHasMore={hasMore}
-      initialPage={page}
-      basePath={basePath}
-      ctx={ctx}
-      categorySlug={categorySlug}
-      loadMoreLabel={loadMoreLabel}
-      emptyMessage={`No ${businessTerm} found in this category.`}
-      itemsPerPage={ITEMS_PER_PAGE}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(itemListSchema),
+        }}
+      />
+      <BusinessListings
+        featuredBusinesses={featuredBusinesses}
+        initialBusinesses={businesses}
+        initialTotal={total}
+        initialHasMore={hasMore}
+        initialPage={page}
+        basePath={basePath}
+        ctx={ctx}
+        categorySlug={categorySlug}
+        loadMoreLabel={loadMoreLabel}
+        emptyMessage={`No ${businessesTermLower} found in this category.`}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
+    </>
   );
 }

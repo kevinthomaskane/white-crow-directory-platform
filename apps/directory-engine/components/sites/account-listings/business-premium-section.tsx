@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { updateBusinessProFields } from '@/actions/update-business-pro-fields';
+import { updateBusinessPremiumFields } from '@/actions/update-business-premium-fields';
 import { getBusinessImageUrl } from '@/lib/utils';
 import { Lock, Upload, Loader2, X, Check } from 'lucide-react';
 
@@ -13,7 +13,7 @@ import { Lock, Upload, Loader2, X, Check } from 'lucide-react';
 const MAX_IMAGE_SIZE_MB = 5;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
-interface BusinessProSectionProps {
+interface BusinessPremiumSectionProps {
   siteBusinessId: string;
   siteDomain: string;
   plan: string | null;
@@ -21,13 +21,13 @@ interface BusinessProSectionProps {
   initialMainPhoto: string | null;
 }
 
-export function BusinessProSection({
+export function BusinessPremiumSection({
   siteBusinessId,
   siteDomain,
   plan,
   initialDescription,
   initialMainPhoto,
-}: BusinessProSectionProps) {
+}: BusinessPremiumSectionProps) {
   const [description, setDescription] = useState(initialDescription ?? '');
   const [currentImagePath, setCurrentImagePath] = useState(initialMainPhoto);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
@@ -40,7 +40,7 @@ export function BusinessProSection({
   const [imageError, setImageError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const isPro = Boolean(plan);
+  const isPremium = Boolean(plan);
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -83,7 +83,7 @@ export function BusinessProSection({
     try {
       const hasNewImage = pendingImage !== null;
 
-      const result = await updateBusinessProFields({
+      const result = await updateBusinessPremiumFields({
         siteBusinessId,
         description: description || null,
         hasNewImage,
@@ -125,8 +125,8 @@ export function BusinessProSection({
   return (
     <div className="rounded-lg border bg-card p-6">
       <div className="flex items-center gap-2 mb-6">
-        <h2 className="text-lg font-medium">Pro Options</h2>
-        {!isPro && (
+        <h2 className="text-lg font-medium">Premium Options</h2>
+        {!isPremium && (
           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
             <Lock className="h-3 w-3" />
             Upgrade to unlock
@@ -136,13 +136,13 @@ export function BusinessProSection({
 
       {/* Description */}
       <div className="space-y-2 mb-6">
-        <Label className={!isPro ? 'opacity-50' : ''}>
+        <Label className={!isPremium ? 'opacity-50' : ''}>
           Business Description
         </Label>
         <Textarea
           placeholder="Describe your business, services, and what makes you unique..."
-          disabled={isLoading || !isPro}
-          className={!isPro ? 'opacity-50' : ''}
+          disabled={isLoading || !isPremium}
+          className={!isPremium ? 'opacity-50' : ''}
           rows={4}
           maxLength={500}
           value={description}
@@ -150,13 +150,13 @@ export function BusinessProSection({
         />
         <p className="text-sm text-muted-foreground">
           A custom description displayed on your listing (max 500 characters).
-          {!isPro && ' Upgrade to Pro to customize.'}
+          {!isPremium && ' Upgrade to Pro to customize.'}
         </p>
       </div>
 
       {/* Main Image */}
       <div className="space-y-3 mb-6">
-        <Label className={!isPro ? 'opacity-50' : ''}>Main Image</Label>
+        <Label className={!isPremium ? 'opacity-50' : ''}>Main Image</Label>
 
         <div className="flex items-start gap-4">
           <div className="relative h-32 w-48 shrink-0 overflow-hidden rounded-lg border bg-muted">
@@ -189,7 +189,7 @@ export function BusinessProSection({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleImageSelect}
-              disabled={isLoading || !isPro}
+              disabled={isLoading || !isPremium}
               className="hidden"
               id="upload-main-image"
             />
@@ -198,8 +198,8 @@ export function BusinessProSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isLoading || !isPro}
-                className={!isPro ? 'opacity-50' : ''}
+                disabled={isLoading || !isPremium}
+                className={!isPremium ? 'opacity-50' : ''}
                 onClick={() => imageInputRef.current?.click()}
               >
                 <Upload className="mr-2 h-4 w-4" />
@@ -226,7 +226,7 @@ export function BusinessProSection({
               {pendingImage
                 ? `Selected: ${pendingImage.name} (will upload on save)`
                 : `Select a custom main image for your listing (max ${MAX_IMAGE_SIZE_MB}MB).`}
-              {!isPro && ' Upgrade to Pro to customize.'}
+              {!isPremium && ' Upgrade to Pro to customize.'}
             </p>
 
             {imageError && (
@@ -240,7 +240,7 @@ export function BusinessProSection({
       </div>
 
       {/* Save Button */}
-      <Button onClick={handleSave} disabled={isLoading || !isPro}>
+      <Button onClick={handleSave} disabled={isLoading || !isPremium}>
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -24,7 +24,7 @@ export function ClaimBusinessBanner({
   const benefits = [
     {
       icon: CheckCircle2,
-      text: 'Update business hours, photos, and contact info',
+      text: 'Update business and contact info',
     },
     {
       icon: TrendingUp,

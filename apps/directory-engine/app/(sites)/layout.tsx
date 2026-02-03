@@ -2,6 +2,7 @@ import { SiteHeader, type NavItem } from '@/components/sites/site-header';
 import { SiteFooter } from '@/components/sites/site-footer';
 import { getSiteConfig, getRouteContext } from '@/lib/data/site';
 import { AuthProvider } from '@/contexts/auth-context';
+import { organizationSchema, websiteSchema } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,8 +87,45 @@ export default async function SitesLayout({
     });
   }
 
+  const siteUrl = siteConfig ? `https://${siteConfig.domain}` : '';
+  const siteLogo = siteConfig?.logo_path
+    ? `${siteUrl}${siteConfig.logo_path}`
+    : '';
+  const siteDescription = siteConfig?.vertical
+    ? `Find the best ${siteConfig.vertical.term_businesses?.toLowerCase() ?? 'businesses'} in your area.`
+    : '';
+
   return (
     <AuthProvider>
+      {siteConfig && (
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(
+                organizationSchema({
+                  name: siteConfig.name,
+                  url: siteUrl,
+                  logo: siteLogo,
+                  description: siteDescription,
+                })
+              ),
+            }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(
+                websiteSchema({
+                  name: siteConfig.name,
+                  url: siteUrl,
+                  description: siteDescription,
+                })
+              ),
+            }}
+          />
+        </>
+      )}
       <div className="min-h-screen bg-background">
         <SiteHeader
           logo={{ text: siteConfig?.name || 'Directory Site' }}

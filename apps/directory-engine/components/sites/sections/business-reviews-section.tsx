@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Star, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getBusinessReviews } from '@/lib/data/site';
 import { RatingStars, formatProvider } from '@/components/sites/business-card';
@@ -7,26 +7,18 @@ import type { BusinessReviewData } from '@/lib/types';
 
 interface BusinessReviewsSectionProps {
   businessId: string;
-  reviewSources: {
-    rating: number | null;
-    provider: string;
-    review_count: number | null;
-    url: string | null;
-  }[];
+  rating: number;
+  totalReviews: number;
   className?: string;
 }
 
 export async function BusinessReviewsSection({
   businessId,
-  reviewSources,
+  totalReviews,
+  rating,
   className,
 }: BusinessReviewsSectionProps) {
   const reviews = await getBusinessReviews(businessId);
-  const primarySource = reviewSources[0];
-  const totalReviews = reviewSources.reduce(
-    (sum, source) => sum + (source.review_count ?? 0),
-    0
-  );
 
   return (
     <section
@@ -35,17 +27,15 @@ export async function BusinessReviewsSection({
       <h2 className="text-xl font-semibold mb-4">Reviews</h2>
 
       {/* Review Summary */}
-      {primarySource?.rating && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-6 border-b border-border mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-4xl font-bold">{primarySource.rating}</span>
-            <div>
-              <RatingStars rating={primarySource.rating} />
-              <p className="text-sm text-muted-foreground mt-1">
-                {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
-              </p>
-            </div>
+      {totalReviews > 0 && (
+        <div className="pb-6 border-b border-border mb-6">
+          <div className="flex gap-2 items-center">
+            <span className="font-bold">{rating}</span>
+            <RatingStars rating={rating} />
           </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Total of {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
+          </p>
         </div>
       )}
 

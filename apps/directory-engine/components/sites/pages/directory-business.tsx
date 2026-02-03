@@ -16,6 +16,7 @@ import { BusinessListingsSkeleton } from '@/components/sites/business-listings-s
 import { ClaimBadge } from '@/components/sites/claim-badge';
 import { BusinessMediaGallery } from '@/components/sites/business-media-gallery';
 import { SingleBusinessMapWrapper } from '@/components/sites/single-business-map-wrapper';
+import { getBreadcrumbListSchema, getLocalBusinessSchema } from '@/lib/schemas';
 
 interface DirectoryBusinessPageProps {
   site: SiteConfig;
@@ -34,8 +35,8 @@ export async function DirectoryBusinessPage({
 }: DirectoryBusinessPageProps) {
   const basePath = site.vertical?.slug ?? '';
   const businessTerm = site.vertical?.term_business ?? 'Business';
-  const businessTermPlural =
-    site.vertical?.term_businesses?.toLowerCase() ?? 'businesses';
+  const businessesTerm = site.vertical?.term_businesses ?? 'Businesses';
+  const businessesTermLower = businessesTerm.toLowerCase();
 
   const singleCategory = ctx.categoryList.length === 1;
   const singleCity = ctx.cityList.length === 1;
@@ -51,11 +52,95 @@ export async function DirectoryBusinessPage({
 
   // Find category and city names for breadcrumb
   const categoryData = ctx.categoryList.find((c) => c.slug === category);
-  const cityData = ctx.cityList.find((c) => c.slug === city);
-  const primaryReviewSource = business.reviewSources[0];
 
+  if (!categoryData) return notFound();
+
+  const cityData = ctx.cityList.find((c) => c.slug === city);
+
+  if (!cityData) return notFound();
+
+  let totalRating = 0;
+  let totalReviews = 0;
+  business.reviewSources.forEach((source) => {
+    if (source.rating && source.review_count) {
+      totalRating += source.rating * source.review_count;
+      totalReviews += source.review_count;
+    }
+  });
+  const averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+
+  const pagePath = buildDirectoryUrl({
+    basePath,
+    categorySlug: category,
+    citySlug: city,
+    singleCity,
+    singleCategory,
+    businessId: business.id,
+  });
+  const pageUrl = `https://${site.domain}${pagePath}`;
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getLocalBusinessSchema({
+              name: business.name,
+              description: business.description ?? '',
+              telephone: business.phone ?? '',
+              address: business.formatted_address ?? '',
+              aggregateRating: {
+                reviewCount: totalReviews,
+                ratingValue: averageRating,
+              },
+            })
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            getBreadcrumbListSchema([
+              {
+                name: businessesTerm ?? 'Directory',
+                url: `https://${site.domain}/${basePath}`,
+              },
+              ...(!singleCategory
+                ? [
+                    {
+                      name: categoryData.name,
+                      url: buildDirectoryUrl({
+                        basePath,
+                        categorySlug: category,
+                        singleCity,
+                        singleCategory,
+                      }),
+                    },
+                  ]
+                : []),
+              ...(!singleCity
+                ? [
+                    {
+                      name: cityData.name,
+                      url: buildDirectoryUrl({
+                        basePath,
+                        categorySlug: category,
+                        citySlug: city,
+                        singleCity,
+                        singleCategory,
+                      }),
+                    },
+                  ]
+                : []),
+              {
+                name: business.name,
+                url: pageUrl,
+              },
+            ])
+          ),
+        }}
+      />
       {/* Header */}
       <div className="bg-muted/30 py-12">
         <div className="mx-auto max-w-6xl px-4">
@@ -65,9 +150,9 @@ export async function DirectoryBusinessPage({
               href={buildDirectoryUrl({ basePath, singleCity, singleCategory })}
               className="hover:text-foreground"
             >
-              {site.vertical?.term_businesses ?? 'Directory'}
+              {businessesTerm ?? 'Directory'}
             </Link>
-            {categoryData && !singleCategory && (
+            {!singleCategory && (
               <>
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
                 <Link
@@ -83,7 +168,7 @@ export async function DirectoryBusinessPage({
                 </Link>
               </>
             )}
-            {cityData && !singleCity && (
+            {!singleCity && (
               <>
                 <ChevronRight className="h-4 w-4 flex-shrink-0" />
                 <Link
@@ -121,14 +206,12 @@ export async function DirectoryBusinessPage({
               </div>
 
               {/* Rating */}
-              {primaryReviewSource?.rating && (
+              {totalReviews > 0 && (
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-xl font-semibold">
-                    {primaryReviewSource.rating}
-                  </span>
-                  <RatingStars rating={primaryReviewSource.rating} />
+                  <span className="text-xl font-semibold">{averageRating}</span>
+                  <RatingStars rating={averageRating} />
                   <span className="text-muted-foreground">
-                    ({primaryReviewSource.review_count ?? 0} reviews)
+                    ({totalReviews} reviews)
                   </span>
                 </div>
               )}
@@ -244,7 +327,8 @@ export async function DirectoryBusinessPage({
               <Suspense fallback={<ReviewsSkeleton />}>
                 <BusinessReviewsSection
                   businessId={businessId}
-                  reviewSources={business.reviewSources}
+                  rating={averageRating}
+                  totalReviews={totalReviews}
                 />
               </Suspense>
 
@@ -335,7 +419,7 @@ export async function DirectoryBusinessPage({
                 basePath={basePath}
                 singleCategory={singleCategory}
                 singleCity={singleCity}
-                title={`Similar ${businessTermPlural} in ${
+                title={`Similar ${businessesTermLower} in ${
                   cityData?.name ?? business.city ?? 'your area'
                 }`}
               />

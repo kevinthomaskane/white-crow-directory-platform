@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { BusinessEditForm } from '@/components/sites/account-listings/business-edit-form';
-import { BusinessProSection } from '@/components/sites/account-listings/business-pro-section';
+import { BusinessPremiumSection } from '@/components/sites/account-listings/business-premium-section';
 import { BusinessMediaSection } from '@/components/sites/account-listings/business-media-section';
+import { BadgeEmbedSection } from '@/components/sites/account-listings/badge-embed-section';
 import type { BusinessHours } from '@/lib/types';
+import { getRouteContext, getSiteConfig } from '@/lib/data/site';
+import { buildDirectoryUrl, slugify } from '@/lib/utils';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,6 +26,12 @@ export default async function ManageListingPage({ params }: Props) {
     redirect('/login');
   }
 
+  const site = await getSiteConfig();
+  if (!site) {
+    return notFound();
+  }
+  const ctx = await getRouteContext(site);
+
   const { data: siteBusiness } = await supabase
     .from('site_businesses')
     .select(
@@ -32,7 +41,10 @@ export default async function ManageListingPage({ params }: Props) {
       plan,
       description,
       main_photo,
+      site_id,
       site:sites!inner(
+        id,
+        name,
         domain
       ),
       business:businesses!inner(
@@ -42,7 +54,8 @@ export default async function ManageListingPage({ params }: Props) {
         website,
         formatted_address,
         hours,
-        main_photo_name
+        main_photo_name,
+        city
       ),
       media:site_business_media(
         id,
@@ -55,6 +68,7 @@ export default async function ManageListingPage({ params }: Props) {
     `
     )
     .eq('id', id)
+    .eq('site_id', site.id)
     .eq('claimed_by', user.id)
     .order('sort_order', {
       referencedTable: 'site_business_media',
@@ -99,6 +113,24 @@ export default async function ManageListingPage({ params }: Props) {
           </div>
         )}
 
+        {siteBusiness.plan && (
+          <BadgeEmbedSection
+            siteBusinessId={siteBusiness.id}
+            siteDomain={siteBusiness.site.domain}
+            siteName={siteBusiness.site.name}
+            businessUrl={buildDirectoryUrl({
+              basePath: site.vertical?.slug ?? '',
+              categorySlug: ctx.categoryList[0]?.slug,
+              citySlug: siteBusiness.business.city
+                ? slugify(siteBusiness.business.city)
+                : ctx.cityList[0]?.slug,
+              businessId: siteBusiness.business.id,
+              singleCity: ctx.cityList.length === 1,
+              singleCategory: ctx.categoryList.length === 1,
+            })}
+          />
+        )}
+
         <div className="rounded-lg border bg-card p-6">
           <h2 className="text-lg font-medium mb-6">
             Edit Business Information
@@ -115,7 +147,7 @@ export default async function ManageListingPage({ params }: Props) {
           />
         </div>
 
-        <BusinessProSection
+        <BusinessPremiumSection
           siteBusinessId={siteBusiness.id}
           siteDomain={siteBusiness.site.domain}
           plan={siteBusiness.plan}
