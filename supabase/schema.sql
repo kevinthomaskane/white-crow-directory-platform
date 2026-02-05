@@ -140,6 +140,27 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."articles" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "site_id" "uuid" NOT NULL,
+    "category_id" "uuid",
+    "slug" "text" NOT NULL,
+    "title" "text" NOT NULL,
+    "content" "text",
+    "excerpt" "text",
+    "featured_image_url" "text",
+    "author" "text",
+    "contributor" "text",
+    "meta_description" "text",
+    "published_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."articles" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."business_categories" (
     "business_id" "uuid" NOT NULL,
     "category_id" "uuid" NOT NULL
@@ -424,6 +445,16 @@ CREATE TABLE IF NOT EXISTS "public"."verticals" (
 ALTER TABLE "public"."verticals" OWNER TO "postgres";
 
 
+ALTER TABLE ONLY "public"."articles"
+    ADD CONSTRAINT "articles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."articles"
+    ADD CONSTRAINT "articles_site_id_slug_key" UNIQUE ("site_id", "slug");
+
+
+
 ALTER TABLE ONLY "public"."business_categories"
     ADD CONSTRAINT "business_categories_pkey" PRIMARY KEY ("business_id", "category_id");
 
@@ -564,6 +595,10 @@ ALTER TABLE ONLY "public"."verticals"
 
 
 
+CREATE INDEX "idx_articles_site_published" ON "public"."articles" USING "btree" ("site_id", "published_at" DESC NULLS LAST);
+
+
+
 CREATE INDEX "idx_business_submissions_pending" ON "public"."business_submissions" USING "btree" ("status") WHERE ("status" = 'pending'::"text");
 
 
@@ -585,6 +620,16 @@ CREATE INDEX "idx_site_business_reviews_created_by" ON "public"."site_business_r
 
 
 CREATE INDEX "idx_site_business_reviews_site_business_id" ON "public"."site_business_reviews" USING "btree" ("site_business_id");
+
+
+
+ALTER TABLE ONLY "public"."articles"
+    ADD CONSTRAINT "articles_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."articles"
+    ADD CONSTRAINT "articles_site_id_fkey" FOREIGN KEY ("site_id") REFERENCES "public"."sites"("id") ON DELETE CASCADE;
 
 
 
@@ -735,6 +780,10 @@ CREATE POLICY "Admins can manage business submissions" ON "public"."business_sub
 
 
 
+CREATE POLICY "Anyone can read published articles" ON "public"."articles" FOR SELECT TO "authenticated", "anon" USING ((("published_at" IS NOT NULL) AND ("published_at" <= "now"())));
+
+
+
 CREATE POLICY "Anyone can read site business reviews" ON "public"."site_business_reviews" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
@@ -772,6 +821,10 @@ CREATE POLICY "Enable read access for all users" ON "public"."site_businesses" F
 
 
 CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "id"));
+
+
+
+CREATE POLICY "admins have full access to articles" ON "public"."articles" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
@@ -829,6 +882,9 @@ CREATE POLICY "admins have full access to states" ON "public"."states" USING ("p
 
 CREATE POLICY "admins have full access to verticals" ON "public"."verticals" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
+
+
+ALTER TABLE "public"."articles" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."business_categories" ENABLE ROW LEVEL SECURITY;
@@ -1134,6 +1190,12 @@ GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
 
 
 
+
+
+
+GRANT ALL ON TABLE "public"."articles" TO "anon";
+GRANT ALL ON TABLE "public"."articles" TO "authenticated";
+GRANT ALL ON TABLE "public"."articles" TO "service_role";
 
 
 
