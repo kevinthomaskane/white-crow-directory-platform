@@ -6,6 +6,8 @@ import { BusinessEditForm } from '@/components/sites/account-listings/business-e
 import { BusinessPremiumSection } from '@/components/sites/account-listings/business-premium-section';
 import { BusinessMediaSection } from '@/components/sites/account-listings/business-media-section';
 import { BadgeEmbedSection } from '@/components/sites/account-listings/badge-embed-section';
+import { ManageSubscriptionButton } from '@/components/sites/account-listings/manage-subscription-button';
+import { UpgradePlanButton } from '@/components/sites/account-listings/upgrade-plan-button';
 import type { BusinessHours } from '@/lib/types';
 import { getRouteContext, getSiteConfig } from '@/lib/data/site';
 import { buildDirectoryUrl, slugify } from '@/lib/utils';
@@ -97,21 +99,19 @@ export default async function ManageListingPage({ params }: Props) {
           </Button>
         </div>
 
-        {siteBusiness.plan && (
-          <div className="rounded-lg border bg-card p-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-medium">Current Plan</h2>
-              <p className="text-muted-foreground capitalize">
-                {siteBusiness.plan}
-              </p>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href={`/profile/listings/${id}/subscription`}>
-                Manage Subscription
-              </Link>
-            </Button>
+        <div className="rounded-lg border bg-card p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-medium">Current Plan</h2>
+            <p className="text-muted-foreground capitalize">
+              {siteBusiness.plan === 'premium' ? 'Premium' : 'Free'}
+            </p>
           </div>
-        )}
+          {siteBusiness.plan === 'premium' ? (
+            <ManageSubscriptionButton siteBusinessId={siteBusiness.id} />
+          ) : (
+            <UpgradePlanButton siteBusinessId={siteBusiness.id} />
+          )}
+        </div>
 
         {siteBusiness.plan && (
           <BadgeEmbedSection

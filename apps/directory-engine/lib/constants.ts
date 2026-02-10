@@ -1,4 +1,5 @@
 export const ADMIN_DOMAIN = 'whitecrowdirectoryengine.com';
+export const STRIPE_PREMIUM_LOOKUP_KEY = 'premium_monthly';
 // TODO: Update email address
 export const CONTACT_EMAIL = 'kevin@10xdev.io';
 

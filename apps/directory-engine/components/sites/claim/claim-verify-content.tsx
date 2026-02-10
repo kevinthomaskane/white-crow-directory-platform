@@ -35,7 +35,6 @@ export function ClaimVerifyContent({
 
   const business = siteBusiness.business;
 
-  console.log(businessUrl);
   // Fetch profile once user is available
   useEffect(() => {
     if (!user) return;

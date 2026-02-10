@@ -16,6 +16,7 @@ import { BusinessListingsSkeleton } from '@/components/sites/business-listings-s
 import { ClaimBadge } from '@/components/sites/claim-badge';
 import { BusinessMediaGallery } from '@/components/sites/business-media-gallery';
 import { SingleBusinessMapWrapper } from '@/components/sites/single-business-map-wrapper';
+import { FeedbackForm } from '@/components/sites/profile/feedback-form';
 import { getBreadcrumbListSchema, getLocalBusinessSchema } from '@/lib/schemas';
 
 interface DirectoryBusinessPageProps {
@@ -425,6 +426,19 @@ export async function DirectoryBusinessPage({
               />
             </Suspense>
           )}
+
+          {/* Feedback */}
+          <section className="rounded-lg border border-border bg-muted/30 p-6">
+            <h2 className="text-xl font-semibold mb-2">Share Your Feedback</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Your feedback helps us improve our directory.
+            </p>
+            <FeedbackForm
+              siteName={site.name}
+              placeholder="Is there any additional information you would like to see about this business?"
+              tag="Business Feedback"
+            />
+          </section>
         </div>
       </div>
     </div>

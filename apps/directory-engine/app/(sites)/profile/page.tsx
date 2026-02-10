@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { UpdateEmailForm } from '@/components/sites/profile/update-email-form';
+import { FeedbackForm } from '@/components/sites/profile/feedback-form';
 import { Button } from '@/components/ui/button';
 import { getSiteConfig } from '@/lib/data/site';
 import { Metadata } from 'next';
@@ -122,6 +123,24 @@ export default async function ProfilePage() {
               </p>
             </div>
           )}
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium">Share Your Feedback</h2>
+            <p className="text-sm text-muted-foreground">
+              Are there any additional features you would like to see for
+              listings? Your input helps us build a better experience.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-card p-6">
+            <FeedbackForm
+              userEmail={user.email ?? ''}
+              userName={displayName}
+              siteName={site.name}
+            />
+          </div>
         </div>
       </div>
     </div>
